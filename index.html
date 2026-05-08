@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ALI Field Portal</title>
+<link rel="icon" type="image/png" href="https://www.andrewlauren.com/wp-content/uploads/2023/11/cropped-favicon-270x270.png">
+<link rel="apple-touch-icon" href="https://www.andrewlauren.com/wp-content/uploads/2023/11/cropped-favicon-270x270.png">
+<meta name="apple-mobile-web-app-title" content="ALI Field">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
@@ -195,26 +200,16 @@
 <div class="screen active" id="home">
   <div class="home-header">
     <div class="logo-row">
-      <div class="logo-badge">
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M16 3L4 11v18h7v-9h10v9h7V11L16 3z" fill="rgba(255,255,255,0.2)" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>
-        <div class="co-name">Andrew Lauren</div>
-        <div class="co-sub">Interiors · Field Portal</div>
-      </div>
+      <img src="https://www.andrewlauren.com/wp-content/uploads/2023/11/andrew-lauren-logo_white.svg" alt="Andrew Lauren Interiors" style="height:48px;width:auto;max-width:220px;">
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
-      <div class="home-date" id="homeDate"></div>
-      <button onclick="openSettings()" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:7px 12px;color:rgba(255,255,255,0.6);font-size:13px;font-weight:600;cursor:pointer;">⚙ Settings</button>
-    </div>
+    <div class="co-sub" style="color:rgba(255,255,255,0.45);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:6px;">Field Portal</div>
+    <div class="home-date" id="homeDate" style="margin-top:10px;"></div>
     <div class="home-greeting" id="homeGreet"></div>
   </div>
 
   <div class="super-badge" onclick="openSettings()">
     <div class="super-badge-left">
-      <div class="super-badge-label">Field Superintendent</div>
+      <div class="super-badge-label">Field Supervisor</div>
       <div class="super-badge-name" id="superBadgeName"><span class="unset">Tap to set your name →</span></div>
     </div>
     <div class="super-badge-edit" id="superBadgeEdit"></div>
@@ -306,16 +301,16 @@
 <div class="screen" id="settings">
   <div class="settings-topbar">
     <button class="back-btn" onclick="goHome()">&#8249; Back</button>
-    <div class="topbar-title" style="color:#fff;">Settings</div>
+    <div class="topbar-title" style="color:#fff;">Field Supervisor</div>
   </div>
   <div class="settings-body">
     <div class="settings-card">
-      <div class="settings-card-title">Superintendent Name</div>
+      <div class="settings-card-title">Your Name</div>
       <div class="field-group">
-        <label class="field-label" style="font-size:15px;">Your full name</label>
+        <label class="field-label" style="font-size:15px;">Full name</label>
         <input class="field-input" type="text" id="set-super-name" placeholder="e.g. Mike Johnson" style="font-size:20px;padding:14px;">
       </div>
-      <p class="settings-note">This name will automatically fill the Field Supervisor and Superintendent fields on every form you open.</p>
+      <p class="settings-note">This name will automatically fill the Field Supervisor fields on every form you open.</p>
     </div>
     <div class="settings-card">
       <div class="settings-card-title">Your Email (CC yourself)</div>
@@ -1289,334 +1284,234 @@ function getRadio(name) {
 }
 
 function exportPDF() {
-  if (typeof window.jspdf === 'undefined') {
-    showToast('PDF library loading, please try again in a moment...');
-    return;
-  }
+  if (typeof window.jspdf === 'undefined') { showToast('PDF library loading, try again...'); return; }
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
 
-  const margin = 20;
-  const pageW = 216;
-  const contentW = pageW - margin * 2;
-  let y = margin;
+  // Load logo then build
+  const logoImg = new Image();
+  logoImg.crossOrigin = 'anonymous';
+  logoImg.onload = () => {
+    const c = document.createElement('canvas'); c.width=560; c.height=140;
+    c.getContext('2d').drawImage(logoImg,0,0,560,140);
+    renderPDF(c.toDataURL('image/png'));
+  };
+  logoImg.onerror = () => renderPDF(null);
+  logoImg.src = 'https://www.andrewlauren.com/wp-content/uploads/2023/11/andrew-lauren-logo_white.svg';
 
-  // Header
-  doc.setFillColor(15, 27, 45);
-  doc.rect(0, 0, pageW, 28, 'F');
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(201, 168, 76);
-  doc.text('ANDREW LAUREN INTERIORS', margin, 12);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 180, 180);
-  doc.text('8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121 · (858) 793-5319', margin, 19);
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(forms[currentFormKey].title.toUpperCase(), margin, 26);
-  y = 38;
+  function renderPDF(logoDataURL) {
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+    const margin=20, pageW=216, contentW=176;
+    let y=20;
 
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(30, 30, 30);
-
-  function section(title) {
-    if (y > 240) { doc.addPage(); y = 20; }
-    doc.setFillColor(240, 237, 230);
-    doc.rect(margin, y, contentW, 7, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 80, 20);
-    doc.text(title.toUpperCase(), margin + 2, y + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 30, 30);
-    y += 10;
-  }
-
-  function field(label, value, wide) {
-    if (y > 255) { doc.addPage(); y = 20; }
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text(label, margin, y);
-    y += 4;
-    doc.setFontSize(11);
-    doc.setTextColor(20, 20, 20);
-    const lines = doc.splitTextToSize(value || '—', contentW);
-    lines.forEach(line => {
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.text(line, margin, y);
-      y += 5.5;
-    });
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, y, margin + contentW, y);
-    y += 5;
-  }
-
-  function twoField(l1, v1, l2, v2) {
-    if (y > 255) { doc.addPage(); y = 20; }
-    const half = (contentW - 8) / 2;
-    doc.setFontSize(8); doc.setTextColor(100,100,100);
-    doc.text(l1, margin, y);
-    doc.text(l2, margin + half + 8, y);
-    y += 4;
-    doc.setFontSize(11); doc.setTextColor(20,20,20);
-    doc.text(v1||'—', margin, y);
-    doc.text(v2||'—', margin + half + 8, y);
-    y += 5.5;
-    doc.setDrawColor(200,200,200);
-    doc.line(margin, y, margin+half, y);
-    doc.line(margin+half+8, y, margin+contentW, y);
-    y += 5;
-  }
-
-  // ── BUILD PDF BY FORM ──
-  if (currentFormKey === 'signoff') {
-    section('Project Information');
-    twoField('Homeowner', gv('so-homeowner'), 'Builder', gv('so-builder'));
-    twoField('Development + Lot #', gv('so-dev'), 'Super', gv('so-super'));
-    field('Address', gv('so-address'));
-    field('Date', gv('so-date'));
-    section('Scope of Work');
-    field('', gv('so-scope'));
-    section('Andrew Lauren Field Rep');
-    twoField('Print Name', gv('so-rep-name'), 'Date', gv('so-rep-date'));
-    field('Signature', gv('so-rep-sig'));
-    section('Homeowner / Super');
-    twoField('Print Name', gv('so-hw-name'), 'Date', gv('so-hw-date'));
-    field('Signature', gv('so-hw-sig'));
-    y += 4;
-    doc.setFontSize(9); doc.setTextColor(100,100,100);
-    doc.text('By signing this document, I have acknowledged that I have received all stated deliverables to a quality level that is acceptable.', margin, y, {maxWidth: contentW});
-
-  } else if (currentFormKey === 'inspection') {
-    section('Job Information');
-    twoField('Lot / Tract Name', gv('ir-lot'), 'Inspection Date', gv('ir-date'));
-    field('Homeowner Name', gv('ir-hw-name'));
-    field('Address', gv('ir-address'));
-    twoField('Homeowner Phone', gv('ir-phone'), 'Inspector Name', gv('ir-inspector'));
-    field('Access', getRadio('ir-access'));
-    section('Issue Details');
-    field('Issue Type', getChecked('issue-type'));
-    field('Additional Material Needed?', getRadio('ir-material'));
-    field('Material Needed to Fix Issue', gv('ir-material-list'));
-    field('Issue Billable?', getRadio('ir-billable'));
-    field('Suggested Repair', gv('ir-repair'));
-    section('Sign-Off');
-    twoField('Signature', gv('ir-sig'), 'Date', gv('ir-sigdate'));
-    y += 6;
-    doc.setFontSize(8.5); doc.setTextColor(100,100,100);
-    doc.text('All ALI Customer Service Field Inspections are conducted as a courtesy to our subcontractors to assess and mitigate lost time.', margin, y, {maxWidth: contentW});
-
-  } else if (currentFormKey === 'quality') {
-    section('Walk Information');
-    field('Inspection Date', gv('qa-date'));
-    field('Lot & Tract', gv('qa-lot'));
-    field('Field Supervisor', gv('qa-super'));
-    section('Description Memo');
-    field('', gv('qa-memo'));
-    section('Field Notes');
-    field('', gv('qa-notes'));
-    section('Sign-Off');
-    twoField('Signature', gv('qa-sig'), 'Date', gv('qa-sigdate'));
-
-  } else if (currentFormKey === 'ewa') {
-    section('Project Information');
-    twoField('Date', gv('ewa-date'), 'Project', gv('ewa-project'));
-    twoField('Lot Number', gv('ewa-lot'), 'Field Supervisor', gv('ewa-super'));
-    field('Bill To', gv('ewa-billto'));
-    section('Work Items & Pricing');
-    // table header
-    doc.setFillColor(230, 227, 220);
-    doc.rect(margin, y, contentW, 7, 'F');
-    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(50,50,50);
-    doc.text('Description / Item', margin+2, y+5);
-    doc.text('Price', margin+contentW-25, y+5);
-    y += 9; doc.setFont('helvetica','normal');
-    let total = 0;
-    for(let i=0;i<ewaRows;i++){
-      const desc = gv('ewa-desc-'+i);
-      const price = gv('ewa-price-'+i);
-      if(desc || price){
-        if(y > 255){ doc.addPage(); y=20; }
-        doc.setFontSize(10); doc.setTextColor(20,20,20);
-        doc.text(desc||'—', margin+2, y);
-        doc.text(price||'', margin+contentW-25, y);
-        y+=6;
-        doc.setDrawColor(220,220,220);
-        doc.line(margin, y, margin+contentW, y);
-        y+=2;
-        const p = parseFloat(price);
-        if(!isNaN(p)) total+=p;
-      }
+    function section(title) {
+      if(y>240){doc.addPage();y=20;}
+      doc.setFillColor(240,237,230); doc.rect(margin,y,contentW,7,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(100,80,20);
+      doc.text(title.toUpperCase(),margin+2,y+5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); y+=10;
     }
-    y+=4;
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(15,27,45);
-    doc.text('TOTAL: $'+total.toFixed(2), margin+contentW-50, y, {align:'left'});
-    y+=8;
-    doc.setFont('helvetica','normal');
-    section('Special Instructions');
-    field('', gv('ewa-instructions'));
-    section('Authorization');
-    twoField('Name', gv('ewa-name'), 'Date', gv('ewa-sigdate'));
-    field('Signature', gv('ewa-sig'));
-    y+=4;
-    doc.setFontSize(8.5); doc.setTextColor(100,100,100);
-    doc.text('Builder must have office approval and signed EWA prior to performing work. Purchase order must be received within 30 days.', margin, y, {maxWidth:contentW});
+    function field(label,value) {
+      if(y>255){doc.addPage();y=20;}
+      if(label){doc.setFontSize(8);doc.setTextColor(100,100,100);doc.text(label,margin,y);y+=4;}
+      doc.setFontSize(11); doc.setTextColor(20,20,20);
+      const lines=doc.splitTextToSize(value||'—',contentW);
+      lines.forEach(l=>{if(y>260){doc.addPage();y=20;}doc.text(l,margin,y);y+=5.5;});
+      doc.setDrawColor(200,200,200); doc.line(margin,y,margin+contentW,y); y+=5;
+    }
+    function twoField(l1,v1,l2,v2) {
+      if(y>255){doc.addPage();y=20;}
+      const half=(contentW-8)/2;
+      doc.setFontSize(8); doc.setTextColor(100,100,100);
+      doc.text(l1,margin,y); doc.text(l2,margin+half+8,y); y+=4;
+      doc.setFontSize(11); doc.setTextColor(20,20,20);
+      doc.text(v1||'—',margin,y); doc.text(v2||'—',margin+half+8,y); y+=5.5;
+      doc.setDrawColor(200,200,200);
+      doc.line(margin,y,margin+half,y); doc.line(margin+half+8,y,margin+contentW,y); y+=5;
+    }
 
-  } else if (currentFormKey === 'fieldmeasure') {
-    section('Job Information');
-    field('VIP / Side Job Name', gv('fm-name'));
-    twoField('Field Measure Superintendent', gv('fm-super'), 'Date', gv('fm-date'));
-    section('Kitchen Backsplash');
-    twoField('Requires Demo?', gv('fm-kit-demo'), 'Existing Material', gv('fm-kit-mat'));
-    twoField('Backsplash Net Qty (SF)', gv('fm-kit-splash-sf'), 'Splash Full Height (SF)', gv('fm-kit-fh-sf'));
-    twoField('Splash Full Ht Trim (LF)', gv('fm-kit-fh-lf'), 'Splash Corners (EA)', gv('fm-kit-corners'));
-    twoField('Window Trim (LF)', gv('fm-kit-win'), 'Height to Cabinet', gv('fm-kit-ht'));
-    section('Counters — Kitchen & Laundry');
-    twoField('Kitchen Counter Net Qty', gv('fm-kit-ctr'), 'Laundry Counter Net Qty', gv('fm-lnd-ctr'));
-    twoField('Kitchen Backsplash Liner (LF)', gv('fm-kit-liner'), 'Laundry Backsplash Liner (LF)', gv('fm-lnd-liner'));
-    twoField('Kitchen Deck Field (SF)', gv('fm-kit-deck-sf'), 'Laundry Deck Field (SF)', gv('fm-lnd-deck-sf'));
-    section('Master Bath Counter');
-    twoField('Requires Demo?', gv('fm-mb-demo'), 'Counter Net Qty', gv('fm-mb-ctr'));
-    twoField('Backsplash Liner (LF)', gv('fm-mb-liner'), 'Backsplash Trim (LF)', gv('fm-mb-trim'));
-    twoField('Deck Field (SF)', gv('fm-mb-deck-sf'), 'Deck Trim (LF)', gv('fm-mb-deck-lf'));
-    section('Master Bath Shower');
-    twoField('Tile Walls to Height', gv('fm-mbs-ht'), 'Walls (SF)', gv('fm-mbs-walls'));
-    twoField('To Ceiling Add (SF)', gv('fm-mbs-ceil'), 'Ceiling Height', gv('fm-mbs-ceilht'));
-    twoField('Floor Field (SF)', gv('fm-mbs-floor'), 'Trim (LF)', gv('fm-mbs-trim'));
-    twoField('Niches (EA)', gv('fm-mbs-niches'), 'Out Corners (EA)', gv('fm-mbs-corners'));
-    twoField('Seats (EA)', gv('fm-mbs-seats'), 'Eye Level Liner (LF)', gv('fm-mbs-liner'));
-    section('Master Bath Tub');
-    twoField('Tile Splash to Height', gv('fm-mbt-ht'), 'Deck Field (SF)', gv('fm-mbt-deck'));
-    twoField('Splash Field (SF)', gv('fm-mbt-splash'), 'Splash Trim (LF)', gv('fm-mbt-splash-trim'));
-    twoField('Face Field (SF)', gv('fm-mbt-face'), 'Out Corners (EA)', gv('fm-mbt-corners'));
-    section('Floors');
-    twoField('Floor Substrate — 1st Floor', gv('fm-fl-1st'), 'Raised Foundation?', gv('fm-fl-raised'));
-    field('Floor Substrate — 2nd Floor', gv('fm-fl-2nd'));
-    field('Floor Notes', gv('fm-fl-notes'));
-    section('General Notes');
-    field('', gv('fm-notes'));
+    // Header
+    doc.setFillColor(15,27,45); doc.rect(0,0,pageW,32,'F');
+    if(logoDataURL){try{doc.addImage(logoDataURL,'PNG',margin,3,72,18);}catch(e){}}
+    if(!logoDataURL){
+      doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(201,168,76);
+      doc.text('ANDREW LAUREN INTERIORS',margin,14);
+    }
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(160,160,160);
+    doc.text('8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121 · (858) 793-5319',margin,25);
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+    doc.text(forms[currentFormKey].title.toUpperCase(),pageW-margin,25,{align:'right'});
+    y=42; doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
 
-  } else if (currentFormKey === 'vehicle') {
-    section('Vehicle & Employee');
-    field('Employee Name', gv('veh-employee'));
-    twoField('License Plate', gv('veh-plate'), 'Date', gv('veh-date'));
-    vehSections.forEach((sec, si) => {
-      section(sec.title);
-      sec.items.forEach((item, ii) => {
-        const key = `${si}-${ii}`;
-        const val = vehState[key];
-        const status = val === 'ok' ? '✓ ADEQUATE' : val === 'bad' ? '✗ INADEQUATE' : 'Not checked';
-        if(y > 255){ doc.addPage(); y=20; }
-        doc.setFontSize(10);
-        doc.setTextColor(val==='ok'?30:val==='bad'?180:100, val==='ok'?120:20, val==='ok'?30:20);
-        doc.text(`${item}`, margin+2, y);
-        doc.setFont('helvetica','bold');
-        doc.text(status, margin+contentW-35, y);
-        doc.setFont('helvetica','normal');
-        doc.setTextColor(20,20,20);
-        y+=6;
+    // Form content
+    if(currentFormKey==='signoff'){
+      section('Project Information');
+      twoField('Homeowner',gv('so-homeowner'),'Builder',gv('so-builder'));
+      twoField('Development + Lot #',gv('so-dev'),'Super',gv('so-super'));
+      field('Address',gv('so-address')); field('Date',gv('so-date'));
+      section('Scope of Work'); field('',gv('so-scope'));
+      section('Andrew Lauren Field Rep');
+      twoField('Print Name',gv('so-rep-name'),'Date',gv('so-rep-date'));
+      section('Homeowner / Super');
+      twoField('Print Name',gv('so-hw-name'),'Date',gv('so-hw-date'));
+      y+=4; doc.setFontSize(9); doc.setTextColor(100,100,100);
+      doc.text('By signing this document, I have acknowledged that I have received all stated deliverables to a quality level that is acceptable.',margin,y,{maxWidth:contentW});
+
+    } else if(currentFormKey==='inspection'){
+      section('Job Information');
+      twoField('Lot / Tract Name',gv('ir-lot'),'Inspection Date',gv('ir-date'));
+      field('Homeowner Name',gv('ir-hw-name')); field('Address',gv('ir-address'));
+      twoField('Homeowner Phone',gv('ir-phone'),'Inspector Name',gv('ir-inspector'));
+      field('Access',getRadio('ir-access'));
+      section('Issue Details');
+      field('Issue Type',getChecked('issue-type'));
+      field('Additional Material Needed?',getRadio('ir-material'));
+      field('Material Needed to Fix Issue',gv('ir-material-list'));
+      field('Issue Billable?',getRadio('ir-billable'));
+      field('Suggested Repair',gv('ir-repair'));
+      section('Sign-Off'); field('Date',gv('ir-sigdate'));
+      y+=4; doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+      doc.text('All ALI Customer Service Field Inspections are conducted as a courtesy to our subcontractors to assess and mitigate lost time.',margin,y,{maxWidth:contentW});
+
+    } else if(currentFormKey==='quality'){
+      section('Walk Information');
+      field('Inspection Date',gv('qa-date')); field('Lot & Tract',gv('qa-lot')); field('Field Supervisor',gv('qa-super'));
+      section('Description Memo'); field('',gv('qa-memo'));
+      section('Field Notes'); field('',gv('qa-notes'));
+      section('Sign-Off'); field('Date',gv('qa-sigdate'));
+
+    } else if(currentFormKey==='ewa'){
+      section('Project Information');
+      twoField('Date',gv('ewa-date'),'Project',gv('ewa-project'));
+      twoField('Lot Number',gv('ewa-lot'),'Field Supervisor',gv('ewa-super'));
+      field('Bill To',gv('ewa-billto'));
+      section('Work Items & Pricing');
+      doc.setFillColor(230,227,220); doc.rect(margin,y,contentW,7,'F');
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(50,50,50);
+      doc.text('Description / Item',margin+2,y+5); doc.text('Price',margin+contentW-25,y+5);
+      y+=9; doc.setFont('helvetica','normal');
+      let total=0;
+      for(let i=0;i<ewaRows;i++){
+        const desc=gv('ewa-desc-'+i),price=gv('ewa-price-'+i);
+        if(desc||price){
+          if(y>255){doc.addPage();y=20;}
+          doc.setFontSize(10); doc.setTextColor(20,20,20);
+          doc.text(desc||'—',margin+2,y); doc.text(price||'',margin+contentW-25,y);
+          y+=6; doc.setDrawColor(220,220,220); doc.line(margin,y,margin+contentW,y); y+=2;
+          const p=parseFloat(price); if(!isNaN(p)) total+=p;
+        }
+      }
+      y+=4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(15,27,45);
+      doc.text('TOTAL: $'+total.toFixed(2),margin+contentW-50,y); y+=8; doc.setFont('helvetica','normal');
+      section('Special Instructions'); field('',gv('ewa-instructions'));
+      section('Authorization'); twoField('Name',gv('ewa-name'),'Date',gv('ewa-sigdate'));
+      y+=4; doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+      doc.text('Builder must have office approval and signed EWA prior to performing work. PO must be received within 30 days.',margin,y,{maxWidth:contentW});
+
+    } else if(currentFormKey==='fieldmeasure'){
+      section('Job Information');
+      field('VIP / Side Job Name',gv('fm-name'));
+      twoField('Field Measure Superintendent',gv('fm-super'),'Date',gv('fm-date'));
+      section('Kitchen Backsplash');
+      twoField('Requires Demo?',gv('fm-kit-demo'),'Existing Material',gv('fm-kit-mat'));
+      twoField('Backsplash Net Qty (SF)',gv('fm-kit-splash-sf'),'Splash Full Height (SF)',gv('fm-kit-fh-sf'));
+      twoField('Splash Full Ht Trim (LF)',gv('fm-kit-fh-lf'),'Splash Corners (EA)',gv('fm-kit-corners'));
+      twoField('Window Trim (LF)',gv('fm-kit-win'),'Height to Cabinet',gv('fm-kit-ht'));
+      section('Counters — Kitchen & Laundry');
+      twoField('Kitchen Counter Net Qty',gv('fm-kit-ctr'),'Laundry Counter Net Qty',gv('fm-lnd-ctr'));
+      twoField('Kitchen Backsplash Liner (LF)',gv('fm-kit-liner'),'Laundry Backsplash Liner (LF)',gv('fm-lnd-liner'));
+      twoField('Kitchen Deck Field (SF)',gv('fm-kit-deck-sf'),'Laundry Deck Field (SF)',gv('fm-lnd-deck-sf'));
+      section('Master Bath Counter');
+      twoField('Requires Demo?',gv('fm-mb-demo'),'Counter Net Qty',gv('fm-mb-ctr'));
+      twoField('Backsplash Liner (LF)',gv('fm-mb-liner'),'Backsplash Trim (LF)',gv('fm-mb-trim'));
+      twoField('Deck Field (SF)',gv('fm-mb-deck-sf'),'Deck Trim (LF)',gv('fm-mb-deck-lf'));
+      section('Master Bath Shower');
+      twoField('Tile Walls to Height',gv('fm-mbs-ht'),'Walls (SF)',gv('fm-mbs-walls'));
+      twoField('To Ceiling Add (SF)',gv('fm-mbs-ceil'),'Ceiling Height',gv('fm-mbs-ceilht'));
+      twoField('Floor Field (SF)',gv('fm-mbs-floor'),'Trim (LF)',gv('fm-mbs-trim'));
+      twoField('Niches (EA)',gv('fm-mbs-niches'),'Out Corners (EA)',gv('fm-mbs-corners'));
+      twoField('Seats (EA)',gv('fm-mbs-seats'),'Eye Level Liner (LF)',gv('fm-mbs-liner'));
+      section('Master Bath Tub');
+      twoField('Tile Splash to Height',gv('fm-mbt-ht'),'Deck Field (SF)',gv('fm-mbt-deck'));
+      twoField('Splash Field (SF)',gv('fm-mbt-splash'),'Splash Trim (LF)',gv('fm-mbt-splash-trim'));
+      twoField('Face Field (SF)',gv('fm-mbt-face'),'Out Corners (EA)',gv('fm-mbt-corners'));
+      section('Floors');
+      twoField('Floor Substrate — 1st Floor',gv('fm-fl-1st'),'Raised Foundation?',gv('fm-fl-raised'));
+      field('Floor Substrate — 2nd Floor',gv('fm-fl-2nd'));
+      field('Floor Notes',gv('fm-fl-notes'));
+      section('General Notes'); field('',gv('fm-notes'));
+
+    } else if(currentFormKey==='vehicle'){
+      section('Vehicle & Employee');
+      field('Employee Name',gv('veh-employee'));
+      twoField('License Plate',gv('veh-plate'),'Date',gv('veh-date'));
+      vehSections.forEach((sec,si)=>{
+        section(sec.title);
+        sec.items.forEach((item,ii)=>{
+          const k=`${si}-${ii}`, val=vehState[k];
+          const status=val==='ok'?'✓ ADEQUATE':val==='bad'?'✗ INADEQUATE':'Not checked';
+          if(y>255){doc.addPage();y=20;}
+          doc.setFontSize(10);
+          doc.setTextColor(val==='ok'?30:val==='bad'?180:100, val==='ok'?120:20, val==='ok'?30:20);
+          doc.text(item,margin+2,y);
+          doc.setFont('helvetica','bold'); doc.text(status,margin+contentW-35,y);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); y+=6;
+        });
       });
-    });
-    if(gv('veh-notes')){
-      section('Notes');
-      field('', gv('veh-notes'));
+      if(gv('veh-notes')){section('Notes');field('',gv('veh-notes'));}
     }
-  }
 
-  // Photos (rendered as a grid on a new page if present)
-  if (formPhotos.length > 0) {
-    doc.addPage();
-    let py = 20;
-    doc.setFillColor(15, 27, 45);
-    doc.rect(0, 0, pageW, 14, 'F');
-    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(201,168,76);
-    doc.text('ATTACHED PHOTOS', margin, 9);
-    py = 22;
-    const cols = 2;
-    const photoW = (contentW - 8) / cols;
-    const photoH = photoW * 0.75;
-    formPhotos.forEach((p, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const px = margin + col * (photoW + 8);
-      // Start new page if needed
-      if (col === 0 && i > 0 && row > 0) {
-        const neededY = py + photoH + 18;
-        if (neededY > 260) { doc.addPage(); py = 20; }
-      }
-      const rowY = py + Math.floor(i / cols) * (photoH + 18);
-      try {
-        // Determine image type
-        const mtype = p.dataURL.includes('data:image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(p.dataURL, mtype, px, rowY, photoW, photoH);
-      } catch(e) {
-        doc.setFillColor(230,230,230);
-        doc.rect(px, rowY, photoW, photoH, 'F');
-        doc.setFontSize(9); doc.setTextColor(150,150,150);
-        doc.text('Photo ' + (i+1), px + photoW/2, rowY + photoH/2, {align:'center'});
-      }
-      // Caption
-      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
-      const caption = p.caption ? `Photo ${i+1}: ${p.caption}` : `Photo ${i+1}`;
-      doc.text(caption, px, rowY + photoH + 5, {maxWidth: photoW});
-    });
-  }
-
-  // Signatures (appended to every form)
-  const sigHW = getSigDataURL('hw');
-  const sigRep = getSigDataURL('rep');
-  if (sigHW || sigRep) {
-    if (y > 220) { doc.addPage(); y = 20; }
-    section('Signatures');
-    const sigW = (contentW - 10) / 2;
-    const sigH = 28;
-    // Labels
-    doc.setFontSize(8); doc.setTextColor(100,100,100);
-    doc.text('Homeowner / Super', margin, y);
-    doc.text('ALI Field Rep', margin + sigW + 10, y);
-    y += 4;
-    // Boxes
-    doc.setDrawColor(200,200,200);
-    doc.rect(margin, y, sigW, sigH);
-    doc.rect(margin + sigW + 10, y, sigW, sigH);
-    // Images
-    if (sigHW) {
-      try { doc.addImage(sigHW, 'PNG', margin+1, y+1, sigW-2, sigH-2); } catch(e){}
+    // Photos
+    if(formPhotos.length>0){
+      doc.addPage(); let py=20;
+      doc.setFillColor(15,27,45); doc.rect(0,0,pageW,14,'F');
+      doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(201,168,76);
+      doc.text('ATTACHED PHOTOS',margin,9); py=22;
+      const photoW=(contentW-8)/2, photoH=photoW*0.75;
+      formPhotos.forEach((p,i)=>{
+        const col=i%2, px=margin+col*(photoW+8);
+        const rowY=py+Math.floor(i/2)*(photoH+18);
+        if(col===0&&i>0){if(rowY>250){doc.addPage();py=20;}}
+        try{const mt=p.dataURL.includes('data:image/png')?'PNG':'JPEG';doc.addImage(p.dataURL,mt,px,rowY,photoW,photoH);}
+        catch(e){doc.setFillColor(220,220,220);doc.rect(px,rowY,photoW,photoH,'F');}
+        doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+        doc.text((p.caption?`Photo ${i+1}: ${p.caption}`:`Photo ${i+1}`),px,rowY+photoH+5,{maxWidth:photoW});
+      });
     }
-    if (sigRep) {
-      try { doc.addImage(sigRep, 'PNG', margin+sigW+11, y+1, sigW-2, sigH-2); } catch(e){}
+
+    // Signatures
+    const sigHW=getSigDataURL('hw'), sigRep=getSigDataURL('rep');
+    if(sigHW||sigRep){
+      if(y>220){doc.addPage();y=20;}
+      section('Signatures');
+      const sigW=(contentW-10)/2, sigH=28;
+      doc.setFontSize(8); doc.setTextColor(100,100,100);
+      doc.text('Homeowner / Super',margin,y); doc.text('ALI Field Rep',margin+sigW+10,y); y+=4;
+      doc.setDrawColor(200,200,200);
+      doc.rect(margin,y,sigW,sigH); doc.rect(margin+sigW+10,y,sigW,sigH);
+      if(sigHW){try{doc.addImage(sigHW,'PNG',margin+1,y+1,sigW-2,sigH-2);}catch(e){}}
+      if(sigRep){try{doc.addImage(sigRep,'PNG',margin+sigW+11,y+1,sigW-2,sigH-2);}catch(e){}}
+      y+=sigH+8;
+      doc.setFontSize(9); doc.setTextColor(100,100,100);
+      doc.text('Date: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),margin,y);
     }
-    y += sigH + 8;
-    // Date line
-    const sigDate = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-    doc.setFontSize(9); doc.setTextColor(100,100,100);
-    doc.text('Date: ' + sigDate, margin, y);
-  }
 
-  // Footer on all pages
-  const totalPages = doc.internal.getNumberOfPages();
-  for(let p=1; p<=totalPages; p++){
-    doc.setPage(p);
-    doc.setFontSize(8); doc.setTextColor(150,150,150);
-    doc.text(`Andrew Lauren Interiors · ${forms[currentFormKey].title} · Page ${p} of ${totalPages}`, margin, 272);
-  }
+    // Footer on every page
+    const totalPages=doc.internal.getNumberOfPages();
+    for(let p=1;p<=totalPages;p++){
+      doc.setPage(p); doc.setFontSize(8); doc.setTextColor(150,150,150);
+      doc.text(`Andrew Lauren Interiors · ${forms[currentFormKey].title} · Page ${p} of ${totalPages}`,margin,272);
+    }
 
-  // Filename: FormType_MM-DD-YYYY.pdf
-  const formName = forms[currentFormKey].title.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
-  const now = new Date();
-  const dateStr = (now.getMonth()+1).toString().padStart(2,'0') + '-' + now.getDate().toString().padStart(2,'0') + '-' + now.getFullYear();
-  const fileName = `${formName}_${dateStr}.pdf`;
-  doc.save(fileName);
-
-  // Open Mail with just subject — super attaches PDF and fills To themselves
-  const myEmail = localStorage.getItem('ali_my_email') || '';
-  const subject = encodeURIComponent(`${forms[currentFormKey].title} — ${dateStr}`);
-  const mailtoUrl = `mailto:${myEmail}?subject=${subject}`;
-
-  showToast('PDF saved! Opening Mail...');
-  setTimeout(() => { window.location.href = mailtoUrl; }, 700);
+    // Save + open Mail
+    const formName=forms[currentFormKey].title.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    const now=new Date();
+    const dateStr=(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0')+'-'+now.getFullYear();
+    doc.save(`${formName}_${dateStr}.pdf`);
+    const myEmail=localStorage.getItem('ali_my_email')||'';
+    const subject=encodeURIComponent(`${forms[currentFormKey].title} — ${dateStr}`);
+    showToast('PDF saved! Opening Mail...');
+    setTimeout(()=>{ window.location.href=`mailto:${myEmail}?subject=${subject}`; },700);
+  } // end renderPDF
 }
 
 function showToast(msg) {
