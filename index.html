@@ -1088,12 +1088,16 @@ function openForm(key) {
   html += `<div class="form-section">
     <div class="section-title">Signature</div>
     <div class="field-group">
-      <label class="field-label" id="sig-label-hw">Homeowner / Super Signature</label>
+      <label class="field-label">Homeowner / Super Signature</label>
       <div class="sig-pad-wrap" id="sig-wrap-hw">
         <canvas id="sig-canvas-hw"></canvas>
         <div class="sig-pad-label" id="sig-hint-hw">Sign here with your finger</div>
       </div>
       <button class="sig-clear-btn" onclick="clearSig('hw')">✕ Clear signature</button>
+    </div>
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">ALI Field Rep — Print Name</label>
+      <input class="field-input" type="text" id="sig-rep-name" placeholder="Field rep name" style="font-size:18px;padding:13px;">
     </div>
     <div class="field-group" style="margin-top:14px;">
       <label class="field-label">ALI Field Rep Signature</label>
@@ -1109,13 +1113,14 @@ function openForm(key) {
   document.getElementById('formBody').scrollTop = 0;
   const today = new Date().toISOString().split('T')[0];
   document.querySelectorAll('input[type=date]').forEach(el => { if(!el.value) el.value = today; });
-  // Auto-fill superintendent name
+  // Auto-fill only the rep signature name — supervisor fields are for the builder's super
   const s = loadSettings();
   if (s.superName) {
-    ['so-super','qa-super','ewa-super','fm-super','veh-employee','ir-inspector'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && !el.value) el.value = s.superName;
-    });
+    const repName = document.getElementById('sig-rep-name');
+    if (repName && !repName.value) repName.value = s.superName;
+    // Also fill veh-employee since that IS the ALI field rep
+    const vehEmp = document.getElementById('veh-employee');
+    if (vehEmp && !vehEmp.value) vehEmp.value = s.superName;
   }
   // Init signature pads after DOM is ready
   setTimeout(() => {
@@ -1480,7 +1485,8 @@ function exportPDF() {
 
     // Signatures
     const sigHW=getSigDataURL('hw'), sigRep=getSigDataURL('rep');
-    if(sigHW||sigRep){
+    const repName=gv('sig-rep-name');
+    if(sigHW||sigRep||repName){
       if(y>220){doc.addPage();y=20;}
       section('Signatures');
       const sigW=(contentW-10)/2, sigH=28;
@@ -1490,7 +1496,12 @@ function exportPDF() {
       doc.rect(margin,y,sigW,sigH); doc.rect(margin+sigW+10,y,sigW,sigH);
       if(sigHW){try{doc.addImage(sigHW,'PNG',margin+1,y+1,sigW-2,sigH-2);}catch(e){}}
       if(sigRep){try{doc.addImage(sigRep,'PNG',margin+sigW+11,y+1,sigW-2,sigH-2);}catch(e){}}
-      y+=sigH+8;
+      y+=sigH+4;
+      if(repName){
+        doc.setFontSize(9); doc.setTextColor(60,60,60);
+        doc.text('Print Name: '+repName, margin+sigW+10, y);
+      }
+      y+=6;
       doc.setFontSize(9); doc.setTextColor(100,100,100);
       doc.text('Date: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),margin,y);
     }
