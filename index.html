@@ -460,62 +460,88 @@ function listDrafts() {
 }
 
 function renderDraftsList() {
-  const drafts = listDrafts();
   const el = document.getElementById('drafts-list');
   const countEl = document.getElementById('draft-count');
   if (!el) return;
+
+  let drafts = [];
+  try { drafts = listDrafts(); } catch(e) { return; }
+
   if (drafts.length === 0) {
     el.innerHTML = '<div class="no-drafts">No saved drafts yet</div>';
     if (countEl) countEl.textContent = '';
     return;
   }
+
   if (countEl) countEl.textContent = drafts.length + ' draft' + (drafts.length > 1 ? 's' : '');
   el.innerHTML = '';
-  drafts.forEach((d, i) => {
-    const icon = FORM_ICONS[d.formKey] || '📄';
-    const formTitle = (forms[d.formKey] || {}).title || d.formKey;
-    let dateStr = 'Saved';
-    try { dateStr = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch(e) {}
-    const preview = d.preview || 'In progress';
 
-    const card = document.createElement('div');
-    card.className = 'draft-card';
+  const formTitles = {
+    signoff: 'CS Sign-Off Sheet', inspection: 'Inspection Request',
+    quality: 'Quality After-Walk', ewa: 'Extra Work Authorization',
+    fieldmeasure: 'VIP / Side Job Field Measure', vehicle: 'Monthly Vehicle Inspection'
+  };
 
-    const iconEl = document.createElement('div');
-    iconEl.className = 'draft-icon';
-    iconEl.textContent = icon;
+  drafts.forEach(function(d) {
+    try {
+      const icon = FORM_ICONS[d.formKey] || '📄';
+      const formTitle = formTitles[d.formKey] || d.formKey || 'Form';
+      let dateStr = 'Saved';
+      try { dateStr = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch(ignore) {}
+      const preview = String(d.preview || 'In progress').slice(0, 40);
+      const storageKey = d.storageKey;
+      const formKey = d.formKey;
 
-    const info = document.createElement('div');
-    info.className = 'draft-info';
-    info.innerHTML = `<div class="draft-title">${formTitle}</div><div class="draft-meta">${dateStr} &middot; ${preview}</div>`;
+      const card = document.createElement('div');
+      card.className = 'draft-card';
 
-    const actions = document.createElement('div');
-    actions.className = 'draft-actions';
+      const left = document.createElement('div');
+      left.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0;';
 
-    const resumeBtn = document.createElement('button');
-    resumeBtn.className = 'draft-resume';
-    resumeBtn.textContent = 'Resume';
-    resumeBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      resumeDraft(d.storageKey, d.formKey);
-    });
+      const iconEl = document.createElement('div');
+      iconEl.className = 'draft-icon';
+      iconEl.textContent = icon;
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'draft-delete';
-    deleteBtn.textContent = '✕';
-    deleteBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      localStorage.removeItem(d.storageKey);
-      renderDraftsList();
-      showToast('Draft deleted');
-    });
+      const info = document.createElement('div');
+      info.className = 'draft-info';
 
-    actions.appendChild(resumeBtn);
-    actions.appendChild(deleteBtn);
-    card.appendChild(iconEl);
-    card.appendChild(info);
-    card.appendChild(actions);
-    el.appendChild(card);
+      const title = document.createElement('div');
+      title.className = 'draft-title';
+      title.textContent = formTitle;
+
+      const meta = document.createElement('div');
+      meta.className = 'draft-meta';
+      meta.textContent = dateStr + ' · ' + preview;
+
+      info.appendChild(title);
+      info.appendChild(meta);
+      left.appendChild(iconEl);
+      left.appendChild(info);
+
+      const actions = document.createElement('div');
+      actions.className = 'draft-actions';
+
+      const resumeBtn = document.createElement('button');
+      resumeBtn.className = 'draft-resume';
+      resumeBtn.textContent = 'Resume';
+      resumeBtn.addEventListener('click', function() { resumeDraft(storageKey, formKey); });
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'draft-delete';
+      deleteBtn.textContent = '✕';
+      deleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        localStorage.removeItem(storageKey);
+        renderDraftsList();
+        showToast('Draft deleted');
+      });
+
+      actions.appendChild(resumeBtn);
+      actions.appendChild(deleteBtn);
+      card.appendChild(left);
+      card.appendChild(actions);
+      el.appendChild(card);
+    } catch(cardErr) { /* skip broken card */ }
   });
 }
 
