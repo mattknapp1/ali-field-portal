@@ -176,8 +176,8 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   /* custom confirm modal */
-  .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:30px; }
-  .confirm-overlay.active { display:flex; }
+  .confirm-overlay { display:flex; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:30px; opacity:0; pointer-events:none; transition: opacity 0.15s; }
+  .confirm-overlay.active { opacity:1; pointer-events:all; }
   .confirm-box { background:#1a2535; border-radius:18px; width:100%; max-width:320px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
   .confirm-msg { color:#fff; font-size:18px; font-weight:600; padding:24px 22px 8px; text-align:center; line-height:1.4; }
   .confirm-sub { color:rgba(255,255,255,0.45); font-size:14px; padding:0 22px 20px; text-align:center; }
@@ -458,15 +458,20 @@ function getDraftKey(formKey, draftId) {
 
 function listDrafts() {
   const drafts = [];
+  const keys = [];
   for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(DRAFT_PREFIX)) {
-      try {
-        const raw = JSON.parse(localStorage.getItem(key));
-        if (raw) drafts.push({ storageKey: key, ...raw });
-      } catch(e) {}
-    }
+    const k = localStorage.key(i);
+    if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
   }
+  keys.forEach(key => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key));
+      if (raw && raw.formKey) drafts.push({ storageKey: key, ...raw });
+    } catch(e) {
+      // corrupt entry — remove it
+      localStorage.removeItem(key);
+    }
+  });
   drafts.sort((a, b) => b.savedAt - a.savedAt);
   return drafts;
 }
@@ -564,12 +569,7 @@ function resumeDraft(storageKey, formKey) {
 function clearAllDrafts() {
   showConfirm('Clear all drafts?', 'All saved drafts will be deleted.', 'Clear All').then(ok => {
     if (!ok) return;
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
-    }
-    keys.forEach(k => localStorage.removeItem(k));
+    listDrafts().forEach(d => localStorage.removeItem(d.storageKey));
     renderDraftsList();
     showToast('All drafts cleared');
   });
@@ -1567,8 +1567,11 @@ function exportPDF() {
   } // end renderPDF
 }
 
-// ── CUSTOM CONFIRM (replaces native confirm() which breaks in standalone mode) ──
-let confirmResolve = null;
+let _confirmResolve = null;
+function confirmResolve(result) {
+  document.getElementById('confirmOverlay').classList.remove('active');
+  if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+}
 function showConfirm(msg, sub, okLabel='Confirm', danger=true) {
   return new Promise(resolve => {
     document.getElementById('confirmMsg').textContent = msg;
@@ -1576,11 +1579,8 @@ function showConfirm(msg, sub, okLabel='Confirm', danger=true) {
     const okBtn = document.getElementById('confirmOkBtn');
     okBtn.textContent = okLabel;
     okBtn.className = 'confirm-btn ok' + (danger ? '' : ' gold');
+    _confirmResolve = resolve;
     document.getElementById('confirmOverlay').classList.add('active');
-    confirmResolve = (result) => {
-      document.getElementById('confirmOverlay').classList.remove('active');
-      resolve(result);
-    };
   });
 }
 
