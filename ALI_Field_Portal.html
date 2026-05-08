@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ALI Field Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #f5edd6;
+    --gold-dark: #a07a2a;
+    --navy: #0f1b2d;
+    --navy2: #1a2535;
+    --navy3: #243047;
+    --white: #ffffff;
+    --gray: #f4f4f2;
+    --gray2: #e8e8e4;
+    --gray3: #9a9a94;
+    --text: #1a1a18;
+    --text2: #4a4a44;
+    --border: #ddddd8;
+    --red: #cc3333;
+    --green: #2a7a4a;
+    --blue: #1a5fa8;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif; background: var(--navy2); color: var(--text); font-size: 16px; }
+
+  /* ── SCREEN MANAGER ── */
+  .screen { display: none; flex-direction: column; min-height: 100vh; }
+  .screen.active { display: flex; }
+
+  /* ── HOME SCREEN ── */
+  #home { background: var(--navy2); }
+  .home-header { background: var(--navy); padding: 28px 20px 22px; }
+  .logo-row { display: flex; align-items: center; gap: 14px; }
+  .logo-badge { width: 52px; height: 52px; background: var(--gold); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-badge svg { width: 32px; height: 32px; }
+  .co-name { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
+  .co-sub { color: var(--gold); font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px; }
+  .home-date { color: rgba(255,255,255,0.45); font-size: 14px; margin-top: 14px; }
+  .home-greeting { color: rgba(255,255,255,0.75); font-size: 17px; margin-top: 3px; font-weight: 500; }
+
+  .section-hdr { color: rgba(255,255,255,0.38); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; padding: 20px 18px 10px; }
+  .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 6px; }
+  .form-card { background: var(--navy); border-radius: var(--radius); padding: 18px 14px 16px; border: 1px solid rgba(255,255,255,0.07); cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: transform 0.1s, opacity 0.1s; user-select: none; }
+  .form-card:active { transform: scale(0.96); opacity: 0.85; }
+  .form-card.full { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 16px; }
+  .card-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 26px; }
+  .card-icon.gold { background: rgba(201,168,76,0.15); }
+  .card-icon.blue { background: rgba(26,95,168,0.18); }
+  .card-icon.teal { background: rgba(29,158,117,0.15); }
+  .card-icon.orange { background: rgba(220,120,30,0.15); }
+  .card-icon.slate { background: rgba(255,255,255,0.07); }
+  .card-icon.red { background: rgba(200,50,50,0.13); }
+  .card-title { color: #fff; font-size: 15px; font-weight: 600; line-height: 1.3; }
+  .card-tag { display: inline-block; font-size: 10px; padding: 3px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.4px; margin-top: 2px; }
+  .card-tag.gold { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .card-tag.blue { background: rgba(26,95,168,0.15); color: #5ba3f0; }
+  .card-tag.teal { background: rgba(29,158,117,0.14); color: #3db88a; }
+  .card-tag.orange { background: rgba(220,120,30,0.14); color: #e8952a; }
+  .card-tag.slate { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5); }
+  .card-tag.red { background: rgba(200,50,50,0.12); color: #e06060; }
+  .card-desc { color: rgba(255,255,255,0.38); font-size: 12px; line-height: 1.4; flex: 1; }
+  .card-chev { color: rgba(255,255,255,0.2); font-size: 22px; flex-shrink: 0; }
+  .home-footer { padding: 20px; text-align: center; color: rgba(255,255,255,0.18); font-size: 12px; line-height: 1.7; margin-top: auto; }
+
+  /* ── FORM SCREEN ── */
+  #formview { background: var(--gray); }
+  .form-topbar { background: var(--navy); padding: 16px 18px 14px; display: flex; align-items: center; gap: 14px; }
+  .back-btn { background: rgba(255,255,255,0.1); border: none; border-radius: 8px; padding: 8px 14px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .back-btn:active { opacity: 0.7; }
+  .topbar-title { color: #fff; font-size: 17px; font-weight: 700; flex: 1; }
+  .export-btn { background: var(--gold); border: none; border-radius: 8px; padding: 8px 16px; color: var(--navy); font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .export-btn:active { opacity: 0.8; }
+
+  .form-body { padding: 16px; flex: 1; overflow-y: auto; }
+  .form-section { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); padding: 18px 16px; margin-bottom: 14px; }
+  .section-title { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold-dark); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--gray2); }
+  .field-group { margin-bottom: 14px; }
+  .field-group:last-child { margin-bottom: 0; }
+  .field-label { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; }
+  .field-input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 17px; color: var(--text); background: var(--gray); font-family: inherit; -webkit-appearance: none; }
+  .field-input:focus { outline: none; border-color: var(--gold); background: #fff; }
+  .field-input.tall { min-height: 90px; resize: vertical; }
+  .field-input.xl { min-height: 120px; resize: vertical; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* checkbox row */
+  .check-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .check-item { display: flex; align-items: center; gap: 8px; background: var(--gray); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; cursor: pointer; flex: 1; min-width: 120px; user-select: none; }
+  .check-item input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--gold-dark); cursor: pointer; flex-shrink: 0; }
+  .check-item label { font-size: 15px; color: var(--text); cursor: pointer; font-weight: 500; }
+  .check-item.checked { border-color: var(--gold); background: var(--gold-light); }
+
+  /* radio row */
+  .radio-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .radio-item { display: flex; align-items: center; gap: 8px; background: var(--gray); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; cursor: pointer; user-select: none; }
+  .radio-item input[type=radio] { width: 22px; height: 22px; accent-color: var(--gold-dark); cursor: pointer; }
+  .radio-item label { font-size: 15px; color: var(--text); cursor: pointer; font-weight: 500; }
+  .radio-item.selected { border-color: var(--gold); background: var(--gold-light); }
+
+  /* vehicle checklist */
+  .veh-row { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--gray2); gap: 10px; }
+  .veh-row:last-child { border-bottom: none; }
+  .veh-label { flex: 1; font-size: 15px; color: var(--text); }
+  .veh-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .veh-btn { width: 60px; height: 38px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--gray); font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text2); }
+  .veh-btn.ok.active { background: #d4edda; border-color: var(--green); color: var(--green); }
+  .veh-btn.bad.active { background: #fce4e4; border-color: var(--red); color: var(--red); }
+
+  /* EWA line items */
+  .ewa-table { width: 100%; border-collapse: collapse; }
+  .ewa-table th { font-size: 12px; font-weight: 700; color: var(--text2); text-align: left; padding: 6px 8px; border-bottom: 1.5px solid var(--border); }
+  .ewa-table td { padding: 4px 4px; }
+  .ewa-input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 15px; background: var(--gray); font-family: inherit; }
+  .ewa-total { text-align: right; font-size: 18px; font-weight: 700; color: var(--navy); padding: 10px 0 0; }
+
+  /* action bar */
+  .action-bar { background: #fff; border-top: 1px solid var(--border); padding: 14px 16px; display: flex; gap: 10px; }
+  .action-bar button { flex: 1; padding: 16px; border-radius: var(--radius-sm); font-size: 17px; font-weight: 700; border: none; cursor: pointer; }
+  .btn-clear { background: var(--gray2); color: var(--text2); }
+  .btn-email { background: var(--gold); color: var(--navy); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-clear:active, .btn-email:active { opacity: 0.8; }
+
+  /* toast */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(30px); background: var(--navy); color: #fff; padding: 12px 22px; border-radius: 30px; font-size: 15px; font-weight: 600; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; white-space: nowrap; z-index: 999; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* drafts section */
+  .drafts-section { padding: 0 12px 6px; }
+  .draft-card { background: var(--navy); border-radius: var(--radius); border: 1px solid rgba(201,168,76,0.2); padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: transform 0.1s; }
+  .draft-card:active { transform: scale(0.97); }
+  .draft-icon { font-size: 22px; flex-shrink: 0; }
+  .draft-info { flex: 1; min-width: 0; }
+  .draft-title { color: #fff; font-size: 15px; font-weight: 600; }
+  .draft-meta { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .draft-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .draft-resume { background: var(--gold); border: none; border-radius: 8px; padding: 8px 14px; color: var(--navy); font-size: 13px; font-weight: 700; cursor: pointer; }
+  .draft-delete { background: rgba(255,255,255,0.07); border: none; border-radius: 8px; padding: 8px 10px; color: rgba(255,255,255,0.4); font-size: 15px; cursor: pointer; }
+  .draft-delete:active { background: rgba(200,50,50,0.2); color: #e06060; }
+  .no-drafts { color: rgba(255,255,255,0.25); font-size: 13px; text-align: center; padding: 10px 0 4px; font-style: italic; }
+
+  /* autosave indicator */
+  .autosave-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-right: 5px; animation: pulse 1.5s ease-in-out; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* settings screen */
+  #settings { background: var(--gray); }
+  .settings-topbar { background: var(--navy); padding: 16px 18px 14px; display: flex; align-items: center; gap: 14px; }
+  .settings-body { padding: 20px 16px; flex: 1; }
+  .settings-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+  .settings-card-title { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold-dark); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--gray2); }
+  .save-btn { width: 100%; padding: 18px; background: var(--gold); border: none; border-radius: var(--radius-sm); font-size: 18px; font-weight: 700; color: var(--navy); cursor: pointer; margin-top: 8px; }
+  .save-btn:active { opacity: 0.8; }
+  .settings-note { font-size: 13px; color: var(--gray3); line-height: 1.6; margin-top: 10px; }
+
+  /* super name badge on home */
+  .super-badge { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.25); border-radius: 10px; margin: 14px 16px 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .super-badge-left { display: flex; flex-direction: column; gap: 2px; }
+  .super-badge-label { color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .super-badge-name { color: #fff; font-size: 19px; font-weight: 700; }
+  .super-badge-name.unset { color: var(--gold); font-size: 15px; font-weight: 500; font-style: italic; }
+  .super-badge-edit { color: var(--gold); font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HOME SCREEN ══════════════════ -->
+<div class="screen active" id="home">
+  <div class="home-header">
+    <div class="logo-row">
+      <div class="logo-badge">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3L4 11v18h7v-9h10v9h7V11L16 3z" fill="rgba(255,255,255,0.2)" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="co-name">Andrew Lauren</div>
+        <div class="co-sub">Interiors · Field Portal</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+      <div class="home-date" id="homeDate"></div>
+      <button onclick="openSettings()" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:7px 12px;color:rgba(255,255,255,0.6);font-size:13px;font-weight:600;cursor:pointer;">⚙ Settings</button>
+    </div>
+    <div class="home-greeting" id="homeGreet"></div>
+  </div>
+
+  <div class="super-badge" onclick="openSettings()">
+    <div class="super-badge-left">
+      <div class="super-badge-label">Field Superintendent</div>
+      <div class="super-badge-name" id="superBadgeName"><span class="unset">Tap to set your name →</span></div>
+    </div>
+    <div class="super-badge-edit" id="superBadgeEdit"></div>
+  </div>
+
+  <div class="section-hdr">Field Inspection Forms</div>
+  <div class="cards-grid">
+    <div class="form-card" onclick="openForm('signoff')">
+      <div class="card-icon gold">✍️</div>
+      <div>
+        <div class="card-title">CS Sign-Off Sheet</div>
+        <div class="card-tag gold">Customer Service</div>
+      </div>
+    </div>
+    <div class="form-card" onclick="openForm('inspection')">
+      <div class="card-icon blue">🔍</div>
+      <div>
+        <div class="card-title">Inspection Request</div>
+        <div class="card-tag blue">Field Inspection</div>
+      </div>
+    </div>
+    <div class="form-card" onclick="openForm('quality')">
+      <div class="card-icon teal">🏅</div>
+      <div>
+        <div class="card-title">Quality After-Walk</div>
+        <div class="card-tag teal">QA / Sign-Off</div>
+      </div>
+    </div>
+    <div class="form-card" onclick="openForm('ewa')">
+      <div class="card-icon orange">📋</div>
+      <div>
+        <div class="card-title">Extra Work Auth</div>
+        <div class="card-tag orange">EWA Form</div>
+      </div>
+    </div>
+    <div class="form-card full" onclick="openForm('fieldmeasure')">
+      <div class="card-icon slate">📐</div>
+      <div style="flex:1">
+        <div class="card-title">VIP / Side Job Field Measure</div>
+        <div class="card-desc">Counters · Showers · Tubs · Floors</div>
+        <div class="card-tag slate">Multi-Section</div>
+      </div>
+      <div class="card-chev">›</div>
+    </div>
+  </div>
+
+  <div class="section-hdr">Vehicle &amp; Fleet</div>
+  <div class="cards-grid">
+    <div class="form-card full" onclick="openForm('vehicle')">
+      <div class="card-icon red">🚗</div>
+      <div style="flex:1">
+        <div class="card-title">Monthly Vehicle Inspection</div>
+        <div class="card-desc">7-section checklist · Adequate / Inadequate</div>
+        <div class="card-tag red">Monthly</div>
+      </div>
+      <div class="card-chev">›</div>
+    </div>
+  </div>
+
+  <div class="section-hdr" style="display:flex;align-items:center;justify-content:space-between;padding-right:18px;">
+    <span>Saved Drafts</span>
+    <span id="draft-count" style="color:rgba(255,255,255,0.25);font-size:11px;"></span>
+  </div>
+  <div class="drafts-section" id="drafts-list"></div>
+
+  <div class="home-footer">
+    Andrew Lauren Interiors<br>
+    8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121<br>
+    (858) 793-5319
+  </div>
+</div>
+
+<!-- ══════════════════ FORM SCREEN ══════════════════ -->
+<div class="screen" id="formview">
+  <div class="form-topbar">
+    <button class="back-btn" onclick="goHome()">‹ Back</button>
+    <div class="topbar-title" id="formTitle"></div>
+    <button class="export-btn" onclick="exportPDF()">✉ Email PDF</button>
+  </div>
+  <div class="form-body" id="formBody"></div>
+  <div class="action-bar" style="flex-wrap:wrap;gap:8px;">
+    <button class="btn-clear" style="flex:0 0 auto;padding:14px 16px;font-size:15px;" onclick="clearForm()">Clear</button>
+    <button class="btn-clear" style="flex:1;padding:14px 16px;font-size:15px;background:#1a3a5c;color:#7eb8f0;border:1px solid rgba(126,184,240,0.25);" onclick="saveDraft()">💾 Save Draft</button>
+    <button class="btn-email" style="flex:2;padding:14px 16px;font-size:15px;" onclick="exportPDF()">✉ Email PDF</button>
+  </div>
+</div>
+
+<!-- ══════════════════ SETTINGS SCREEN ══════════════════ -->
+<div class="screen" id="settings">
+  <div class="settings-topbar">
+    <button class="back-btn" onclick="goHome()">&#8249; Back</button>
+    <div class="topbar-title" style="color:#fff;">Settings</div>
+  </div>
+  <div class="settings-body">
+    <div class="settings-card">
+      <div class="settings-card-title">Superintendent Name</div>
+      <div class="field-group">
+        <label class="field-label" style="font-size:15px;">Your full name</label>
+        <input class="field-input" type="text" id="set-super-name" placeholder="e.g. Mike Johnson" style="font-size:20px;padding:14px;">
+      </div>
+      <p class="settings-note">This name will automatically fill the Field Supervisor and Superintendent fields on every form you open.</p>
+    </div>
+    <div class="settings-card">
+      <div class="settings-card-title">Office Email Address</div>
+      <div class="field-group">
+        <label class="field-label" style="font-size:15px;">Send completed PDFs to</label>
+        <input class="field-input" type="email" id="set-office-email" placeholder="e.g. office@andrewlauren.com" style="font-size:17px;padding:14px;">
+      </div>
+      <p class="settings-note">When you tap "Email PDF to Office," your Mail app will open with this address pre-filled in the To field.</p>
+    </div>
+    <div class="settings-card">
+      <div class="settings-card-title">Your Email (CC yourself)</div>
+      <div class="field-group">
+        <label class="field-label" style="font-size:15px;">Keep a copy for yourself</label>
+        <input class="field-input" type="email" id="set-my-email" placeholder="e.g. mike@andrewlauren.com" style="font-size:17px;padding:14px;">
+      </div>
+      <p class="settings-note">Optional. If set, you will be CC'd on every email so you have a record.</p>
+    </div>
+    <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentFormKey = null;
+
+// ── SETTINGS (localStorage) ──
+function loadSettings() {
+  return {
+    superName: localStorage.getItem('ali_super_name') || '',
+    officeEmail: localStorage.getItem('ali_office_email') || '',
+    myEmail: localStorage.getItem('ali_my_email') || ''
+  };
+}
+
+function saveSettings() {
+  const name = document.getElementById('set-super-name').value.trim();
+  const office = document.getElementById('set-office-email').value.trim();
+  const mine = document.getElementById('set-my-email').value.trim();
+  localStorage.setItem('ali_super_name', name);
+  localStorage.setItem('ali_office_email', office);
+  localStorage.setItem('ali_my_email', mine);
+  updateSuperBadge();
+  showToast('Settings saved!');
+  setTimeout(goHome, 900);
+}
+
+function openSettings() {
+  const s = loadSettings();
+  document.getElementById('set-super-name').value = s.superName;
+  document.getElementById('set-office-email').value = s.officeEmail;
+  document.getElementById('set-my-email').value = s.myEmail;
+  showScreen('settings');
+}
+
+function updateSuperBadge() {
+  const s = loadSettings();
+  const el = document.getElementById('superBadgeName');
+  const edit = document.getElementById('superBadgeEdit');
+  if (s.superName) {
+    el.innerHTML = s.superName;
+    el.className = 'super-badge-name';
+    edit.textContent = 'Edit';
+  } else {
+    el.innerHTML = '<span class="unset">Tap to set your name \u2192</span>';
+    el.className = 'super-badge-name';
+    edit.textContent = '';
+  }
+}
+
+// ── DRAFTS (localStorage) ──
+const DRAFT_PREFIX = 'ali_draft_';
+const FORM_ICONS = { signoff:'✍️', inspection:'🔍', quality:'🏅', ewa:'📋', fieldmeasure:'📐', vehicle:'🚗' };
+
+function collectFormData() {
+  const data = {};
+  // All text/date/email/tel inputs and textareas
+  document.querySelectorAll('#formBody input, #formBody textarea').forEach(el => {
+    if (el.id) data[el.id] = el.value;
+  });
+  // Radio buttons
+  document.querySelectorAll('#formBody input[type=radio]:checked').forEach(el => {
+    data['__radio__' + el.name] = el.value;
+  });
+  // Checkboxes
+  document.querySelectorAll('#formBody input[type=checkbox]').forEach(el => {
+    data['__check__' + el.id] = el.checked;
+  });
+  // Vehicle ok/fail state
+  Object.keys(vehState).forEach(k => { data['__veh__' + k] = vehState[k]; });
+  return data;
+}
+
+function restoreFormData(data) {
+  Object.entries(data).forEach(([key, val]) => {
+    if (key.startsWith('__radio__')) {
+      const name = key.replace('__radio__', '');
+      const radio = document.querySelector(`input[type=radio][name="${name}"][value="${val}"]`);
+      if (radio) {
+        radio.checked = true;
+        const item = radio.closest('.radio-item');
+        if (item) item.classList.add('selected');
+      }
+    } else if (key.startsWith('__check__')) {
+      const id = key.replace('__check__', '');
+      const cb = document.getElementById(id);
+      if (cb) {
+        cb.checked = !!val;
+        const item = cb.closest('.check-item');
+        if (item) item.classList.toggle('checked', !!val);
+      }
+    } else if (key.startsWith('__veh__')) {
+      const vkey = key.replace('__veh__', '');
+      if (val) setVeh(vkey, val);
+    } else {
+      const el = document.getElementById(key);
+      if (el) el.value = val;
+    }
+  });
+}
+
+function getDraftKey(formKey, draftId) {
+  return DRAFT_PREFIX + formKey + '_' + draftId;
+}
+
+function listDrafts() {
+  const drafts = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(DRAFT_PREFIX)) {
+      try {
+        const raw = JSON.parse(localStorage.getItem(key));
+        if (raw) drafts.push({ storageKey: key, ...raw });
+      } catch(e) {}
+    }
+  }
+  drafts.sort((a, b) => b.savedAt - a.savedAt);
+  return drafts;
+}
+
+function renderDraftsList() {
+  const drafts = listDrafts();
+  const el = document.getElementById('drafts-list');
+  const countEl = document.getElementById('draft-count');
+  if (!el) return;
+  if (drafts.length === 0) {
+    el.innerHTML = '<div class="no-drafts">No saved drafts yet</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  if (countEl) countEl.textContent = drafts.length + ' draft' + (drafts.length > 1 ? 's' : '');
+  el.innerHTML = drafts.map(d => {
+    const icon = FORM_ICONS[d.formKey] || '📄';
+    const formTitle = (forms[d.formKey] || {}).title || d.formKey;
+    const date = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const preview = d.preview || 'No details';
+    return `<div class="draft-card">
+      <div class="draft-icon">${icon}</div>
+      <div class="draft-info">
+        <div class="draft-title">${formTitle}</div>
+        <div class="draft-meta">${date} · ${preview}</div>
+      </div>
+      <div class="draft-actions">
+        <button class="draft-resume" onclick="resumeDraft('${d.storageKey}','${d.formKey}')">Resume</button>
+        <button class="draft-delete" onclick="deleteDraft(event,'${d.storageKey}')" aria-label="Delete draft">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveDraft() {
+  if (!currentFormKey) return;
+  const data = collectFormData();
+  // Build a short preview string from key fields
+  const previewCandidates = ['so-homeowner','ir-hw-name','qa-lot','ewa-project','fm-name','veh-employee'];
+  let preview = '';
+  previewCandidates.forEach(id => { if (!preview && data[id]) preview = data[id]; });
+  if (!preview) preview = 'In progress';
+  const draftId = Date.now();
+  const storageKey = getDraftKey(currentFormKey, draftId);
+  const payload = { formKey: currentFormKey, savedAt: draftId, preview, data };
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(payload));
+    showToast('✓ Draft saved');
+    renderDraftsList();
+  } catch(e) {
+    showToast('Storage full — delete old drafts');
+  }
+}
+
+function resumeDraft(storageKey, formKey) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(storageKey));
+    if (!raw) return;
+    openForm(formKey);
+    // Restore after a tick so the DOM is ready
+    setTimeout(() => {
+      restoreFormData(raw.data);
+      // recalc EWA total if needed
+      if (formKey === 'ewa') calcEwa();
+      showToast('Draft restored');
+    }, 80);
+  } catch(e) { showToast('Could not load draft'); }
+}
+
+function deleteDraft(e, storageKey) {
+  e.stopPropagation();
+  if (confirm('Delete this draft?')) {
+    localStorage.removeItem(storageKey);
+    renderDraftsList();
+    showToast('Draft deleted');
+  }
+}
+
+// ── DATE / GREETING ──
+(function(){
+  const now = new Date();
+  document.getElementById('homeDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const h = now.getHours();
+  const s = loadSettings();
+  const namepart = s.superName ? ', ' + s.superName.split(' ')[0] : '';
+  document.getElementById('homeGreet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + namepart;
+  updateSuperBadge();
+  renderDraftsList();
+})();
+
+// ── VEHICLE CHECKLIST DATA ──
+const vehSections = [
+  { title: '1. Initial Approach', items: ['Fluid leaks (oil, transmission, brake fluid, water)', 'Suspension (no body tilt or lean)'] },
+  { title: '2. Under-Hood Check', items: ['Clean (no leaks, excess oil film)', 'Belts are tight (fan, alternator, a/c, water pump)', 'Last service check posted (within 90 days)', 'Fluid levels adequate (do not check water when engine is hot)'] },
+  { title: '3. General Interior', items: ['Floor / seats / windows clear and clean', 'Seat belts present and functional for all seats', 'Emergency equipment present and ready'] },
+  { title: '4. From the Driver\'s Seat', items: ['Emergency brake set and adequate', 'Driver\'s seat properly adjusted', 'Mirrors present and properly adjusted', 'Horn works', 'Dash and interior dome lights working', 'Engine starts easily, runs smoothly', 'Gauges working (oil, water, amps, fuel)', 'Heat, A/C, defrost systems working', 'Windshield wipers and washer working'] },
+  { title: '5. Walk Around', items: ['Windshield (clear, clean, unbroken)', 'Headlights clean and working (high & low)', 'Wiper blades clean and in good condition', 'Side / rear windows (unobstructed, unbroken)', 'Taillights clean and working', 'Turn signals working on all 4 corners', 'Emergency flasher working on all 4 corners', 'Tire condition (inflation, sidewall damage)', 'Tire wear (tread depth, alignment wear pattern)', 'Spare tire provided (inflated, with jack and tools)', 'Bumpers (properly secured and aligned)', 'Body (no significant damage, loose parts)'] },
+  { title: '6. Driver Check-Out', items: ['Qualification (proper license, status)', 'Condition (not sick, tired, under medication)', 'Attitude (alert, focused, responsive)'] },
+  { title: '7. Test Drive', items: ['Transmission (smooth start, shifts; no clunks)', 'Engine (smooth running, no unusual noises)', 'Speedometer and odometer working', 'Steering (responsive, no free-play in wheel)', 'Noises (no unusual rattles, clunks)', 'Brakes (stops safely, no fading, grabbing, pulling or squeaking)'] }
+];
+
+let vehState = {}; // key: "s-i" => 'ok'|'bad'|null
+
+function buildVehicleForm() {
+  vehState = {};
+  let html = '';
+  vehSections.forEach((sec, si) => {
+    html += `<div class="form-section"><div class="section-title">${sec.title}</div>`;
+    sec.items.forEach((item, ii) => {
+      const key = `${si}-${ii}`;
+      vehState[key] = null;
+      html += `<div class="veh-row">
+        <div class="veh-label">${item}</div>
+        <div class="veh-btns">
+          <button class="veh-btn ok" id="ok-${key}" onclick="setVeh('${key}','ok')">OK</button>
+          <button class="veh-btn bad" id="bad-${key}" onclick="setVeh('${key}','bad')">FAIL</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  html += `<div class="form-section">
+    <div class="section-title">Notes</div>
+    <div class="field-group">
+      <textarea class="field-input xl" id="veh-notes" placeholder="Any additional notes or observations..."></textarea>
+    </div>
+  </div>`;
+  return html;
+}
+
+function setVeh(key, val) {
+  vehState[key] = val;
+  const okBtn = document.getElementById('ok-'+key);
+  const badBtn = document.getElementById('bad-'+key);
+  okBtn.className = 'veh-btn ok' + (val==='ok' ? ' active' : '');
+  badBtn.className = 'veh-btn bad' + (val==='bad' ? ' active' : '');
+}
+
+// ── EWA LINE ITEMS ──
+let ewaRows = 8;
+function buildEwaRows() {
+  let rows = '';
+  for(let i=0;i<ewaRows;i++){
+    rows += `<tr>
+      <td><input class="ewa-input" type="text" id="ewa-desc-${i}" placeholder="Description"></td>
+      <td style="width:110px"><input class="ewa-input" type="text" id="ewa-price-${i}" placeholder="$0.00" oninput="calcEwa()"></td>
+    </tr>`;
+  }
+  return rows;
+}
+
+function calcEwa() {
+  let total = 0;
+  for(let i=0;i<ewaRows;i++){
+    const v = parseFloat((document.getElementById('ewa-price-'+i)||{}).value||0);
+    if(!isNaN(v)) total += v;
+  }
+  const el = document.getElementById('ewa-total');
+  if(el) el.textContent = '$' + total.toFixed(2);
+}
+
+// ── FORM DEFINITIONS ──
+const forms = {
+  signoff: {
+    title: 'CS Sign-Off Sheet',
+    render: () => `
+      <div class="form-section">
+        <div class="section-title">Project Information</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Homeowner</label>
+            <input class="field-input" type="text" id="so-homeowner" placeholder="Full name">
+          </div>
+          <div>
+            <label class="field-label">Builder</label>
+            <input class="field-input" type="text" id="so-builder" placeholder="Builder name">
+          </div>
+        </div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Development + Lot #</label>
+            <input class="field-input" type="text" id="so-dev" placeholder="Development / Lot">
+          </div>
+          <div>
+            <label class="field-label">Super</label>
+            <input class="field-input" type="text" id="so-super" placeholder="Superintendent">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Address</label>
+          <input class="field-input" type="text" id="so-address" placeholder="Jobsite address">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Date</label>
+          <input class="field-input" type="date" id="so-date">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Scope of Work</div>
+        <div class="field-group">
+          <textarea class="field-input xl" id="so-scope" placeholder="Describe the full scope of work completed..."></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Andrew Lauren Field Rep</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Print Name</label>
+            <input class="field-input" type="text" id="so-rep-name" placeholder="Print name">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input class="field-input" type="date" id="so-rep-date">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Signature (type full name)</label>
+          <input class="field-input" type="text" id="so-rep-sig" placeholder="Type full name as signature" style="font-style:italic;font-size:19px;">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Homeowner / Super</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Print Name</label>
+            <input class="field-input" type="text" id="so-hw-name" placeholder="Print name">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input class="field-input" type="date" id="so-hw-date">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Signature (type full name)</label>
+          <input class="field-input" type="text" id="so-hw-sig" placeholder="Type full name as signature" style="font-style:italic;font-size:19px;">
+        </div>
+      </div>
+    `
+  },
+
+  inspection: {
+    title: 'Inspection Request',
+    render: () => `
+      <div class="form-section">
+        <div class="section-title">Job Information</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Lot / Tract Name</label>
+            <input class="field-input" type="text" id="ir-lot" placeholder="Lot / Tract">
+          </div>
+          <div>
+            <label class="field-label">Inspection Date</label>
+            <input class="field-input" type="date" id="ir-date">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Homeowner Name</label>
+          <input class="field-input" type="text" id="ir-hw-name" placeholder="Full name">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Address</label>
+          <input class="field-input" type="text" id="ir-address" placeholder="Property address">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Homeowner Phone</label>
+          <input class="field-input" type="tel" id="ir-phone" placeholder="(858) 000-0000">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Inspector Name</label>
+          <input class="field-input" type="text" id="ir-inspector" placeholder="Inspector name">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Access</label>
+          <div class="radio-group" id="ir-access-grp">
+            <div class="radio-item" onclick="selectRadio('ir-access-grp','Homeowner')">
+              <input type="radio" name="ir-access" value="Homeowner"> <label>Homeowner</label>
+            </div>
+            <div class="radio-item" onclick="selectRadio('ir-access-grp','Super')">
+              <input type="radio" name="ir-access" value="Super"> <label>Super</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Issue Details</div>
+        <div class="field-group">
+          <label class="field-label">Issue Type</label>
+          <div class="check-group">
+            <div class="check-item" onclick="toggleCheck(this)">
+              <input type="checkbox" value="Builder/Trade Damage"><label>Builder / Trade Damage</label>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <input type="checkbox" value="Homeowner Damage"><label>Homeowner Damage</label>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <input type="checkbox" value="Install Error"><label>Install Error</label>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <input type="checkbox" value="Unknown"><label>Unknown</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Will additional material be needed?</label>
+          <div class="radio-group" id="ir-material-grp">
+            <div class="radio-item" onclick="selectRadio('ir-material-grp','Yes')">
+              <input type="radio" name="ir-material" value="Yes"><label>Yes</label>
+            </div>
+            <div class="radio-item" onclick="selectRadio('ir-material-grp','No')">
+              <input type="radio" name="ir-material" value="No"><label>No</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Material needed to fix the issue</label>
+          <textarea class="field-input tall" id="ir-material-list" placeholder="List materials to be ordered..."></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Is issue billable?</label>
+          <div class="radio-group" id="ir-billable-grp">
+            <div class="radio-item" onclick="selectRadio('ir-billable-grp','Yes')">
+              <input type="radio" name="ir-billable" value="Yes"><label>Yes</label>
+            </div>
+            <div class="radio-item" onclick="selectRadio('ir-billable-grp','No')">
+              <input type="radio" name="ir-billable" value="No"><label>No</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Suggested Repair (include other trades needed)</label>
+          <textarea class="field-input xl" id="ir-repair" placeholder="Describe suggested repair and any other trades required..."></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Sign-Off</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Signature (type name)</label>
+            <input class="field-input" type="text" id="ir-sig" placeholder="Type name as signature" style="font-style:italic;font-size:19px;">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input class="field-input" type="date" id="ir-sigdate">
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  quality: {
+    title: 'Quality After-Walk',
+    render: () => `
+      <div class="form-section">
+        <div class="section-title">Walk Information</div>
+        <div class="field-group">
+          <label class="field-label">Inspection Date</label>
+          <input class="field-input" type="date" id="qa-date">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Lot &amp; Tract</label>
+          <input class="field-input" type="text" id="qa-lot" placeholder="Lot number and tract name">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Field Supervisor</label>
+          <input class="field-input" type="text" id="qa-super" placeholder="Supervisor name">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Description Memo</div>
+        <div class="field-group">
+          <textarea class="field-input tall" id="qa-memo" placeholder="Quality After-Walk — description memo..."></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Field Notes</div>
+        <div class="field-group">
+          <textarea class="field-input xl" id="qa-notes" placeholder="Detailed field notes from the walk-through..."></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Sign-Off</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Signature (type name)</label>
+            <input class="field-input" type="text" id="qa-sig" placeholder="Type name as signature" style="font-style:italic;font-size:19px;">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input class="field-input" type="date" id="qa-sigdate">
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  ewa: {
+    title: 'Extra Work Authorization',
+    render: () => `
+      <div class="form-section">
+        <div class="section-title">Project Information</div>
+        <div class="field-group">
+          <label class="field-label">Date</label>
+          <input class="field-input" type="date" id="ewa-date">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Project</label>
+          <input class="field-input" type="text" id="ewa-project" placeholder="Project name">
+        </div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Lot Number</label>
+            <input class="field-input" type="text" id="ewa-lot" placeholder="Lot #">
+          </div>
+          <div>
+            <label class="field-label">Field Supervisor</label>
+            <input class="field-input" type="text" id="ewa-super" placeholder="Supervisor name">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Bill To</label>
+          <input class="field-input" type="text" id="ewa-billto" placeholder="Bill to name / company">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Work Items &amp; Pricing</div>
+        <table class="ewa-table">
+          <thead><tr><th>Description / Item</th><th style="width:110px">Price</th></tr></thead>
+          <tbody>${buildEwaRows()}</tbody>
+        </table>
+        <div class="ewa-total">Total: <span id="ewa-total">$0.00</span></div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Special Instructions</div>
+        <div class="field-group">
+          <textarea class="field-input tall" id="ewa-instructions" placeholder="Special instructions or notes..."></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Authorization</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Name</label>
+            <input class="field-input" type="text" id="ewa-name" placeholder="Print name">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input class="field-input" type="date" id="ewa-sigdate">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Signature (type full name)</label>
+          <input class="field-input" type="text" id="ewa-sig" placeholder="Type full name as signature" style="font-style:italic;font-size:19px;">
+        </div>
+        <p style="font-size:12px;color:#888;margin-top:10px;line-height:1.5;">Builder must have office approval and signed EWA prior to performing work. Purchase order / billing instrument must be received within 30 days after work has been completed.</p>
+      </div>
+    `
+  },
+
+  fieldmeasure: {
+    title: 'VIP / Side Job Field Measure',
+    render: () => `
+      <div class="form-section">
+        <div class="section-title">Job Information</div>
+        <div class="field-group">
+          <label class="field-label">VIP / Side Job Name</label>
+          <input class="field-input" type="text" id="fm-name" placeholder="Job name">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Field Measure Superintendent</label>
+          <input class="field-input" type="text" id="fm-super" placeholder="Superintendent name">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Field Measure Date</label>
+          <input class="field-input" type="date" id="fm-date">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Kitchen</div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">Requires Demo?</label>
+            <input class="field-input" type="text" id="fm-kit-demo" placeholder="Yes / No">
+          </div>
+          <div>
+            <label class="field-label">Existing Material</label>
+            <input class="field-input" type="text" id="fm-kit-mat" placeholder="If demo required">
+          </div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Backsplash Net Qty (SF)</label><input class="field-input" type="text" id="fm-kit-splash-sf" placeholder="SF"></div>
+          <div><label class="field-label">Splash Full Height (SF)</label><input class="field-input" type="text" id="fm-kit-fh-sf" placeholder="SF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Splash Full Height Trim (LF)</label><input class="field-input" type="text" id="fm-kit-fh-lf" placeholder="LF"></div>
+          <div><label class="field-label">Splash Corners (EA)</label><input class="field-input" type="text" id="fm-kit-corners" placeholder="EA"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Window Trim (LF)</label><input class="field-input" type="text" id="fm-kit-win" placeholder="LF"></div>
+          <div><label class="field-label">Height to Cabinet</label><input class="field-input" type="text" id="fm-kit-ht" placeholder="Height"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Counters — Kitchen &amp; Laundry</div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Kitchen Counter Net Qty</label><input class="field-input" type="text" id="fm-kit-ctr" placeholder="Qty"></div>
+          <div><label class="field-label">Laundry Counter Net Qty</label><input class="field-input" type="text" id="fm-lnd-ctr" placeholder="Qty"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Backsplash Liner (LF)</label><input class="field-input" type="text" id="fm-kit-liner" placeholder="LF"></div>
+          <div><label class="field-label">Backsplash Liner (LF)</label><input class="field-input" type="text" id="fm-lnd-liner" placeholder="LF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Backsplash Trim (LF)</label><input class="field-input" type="text" id="fm-kit-trim" placeholder="LF"></div>
+          <div><label class="field-label">Backsplash Trim (LF)</label><input class="field-input" type="text" id="fm-lnd-trim" placeholder="LF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Deck Field (SF)</label><input class="field-input" type="text" id="fm-kit-deck-sf" placeholder="SF"></div>
+          <div><label class="field-label">Deck Field (SF)</label><input class="field-input" type="text" id="fm-lnd-deck-sf" placeholder="SF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Deck Trim (LF)</label><input class="field-input" type="text" id="fm-kit-deck-lf" placeholder="LF"></div>
+          <div><label class="field-label">Deck Trim (LF)</label><input class="field-input" type="text" id="fm-lnd-deck-lf" placeholder="LF"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Master Bath Counter</div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Requires Demo?</label><input class="field-input" type="text" id="fm-mb-demo" placeholder="Yes / No"></div>
+          <div><label class="field-label">Counter Net Qty</label><input class="field-input" type="text" id="fm-mb-ctr" placeholder="Qty"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Backsplash Liner (LF)</label><input class="field-input" type="text" id="fm-mb-liner" placeholder="LF"></div>
+          <div><label class="field-label">Backsplash Trim (LF)</label><input class="field-input" type="text" id="fm-mb-trim" placeholder="LF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Deck Field (SF)</label><input class="field-input" type="text" id="fm-mb-deck-sf" placeholder="SF"></div>
+          <div><label class="field-label">Deck Trim (LF)</label><input class="field-input" type="text" id="fm-mb-deck-lf" placeholder="LF"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Master Bath Shower</div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Tile Walls to Height</label><input class="field-input" type="text" id="fm-mbs-ht" placeholder="ft / in"></div>
+          <div><label class="field-label">Walls (SF)</label><input class="field-input" type="text" id="fm-mbs-walls" placeholder="SF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Add if To Ceiling (SF)</label><input class="field-input" type="text" id="fm-mbs-ceil" placeholder="SF"></div>
+          <div><label class="field-label">Ceiling Height</label><input class="field-input" type="text" id="fm-mbs-ceilht" placeholder="Height"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Floor Field (SF)</label><input class="field-input" type="text" id="fm-mbs-floor" placeholder="SF"></div>
+          <div><label class="field-label">Trim (LF)</label><input class="field-input" type="text" id="fm-mbs-trim" placeholder="LF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Niches (EA)</label><input class="field-input" type="text" id="fm-mbs-niches" placeholder="EA"></div>
+          <div><label class="field-label">Out Corners (EA)</label><input class="field-input" type="text" id="fm-mbs-corners" placeholder="EA"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Seats (EA)</label><input class="field-input" type="text" id="fm-mbs-seats" placeholder="EA"></div>
+          <div><label class="field-label">Eye Level Liner (LF)</label><input class="field-input" type="text" id="fm-mbs-liner" placeholder="LF"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Master Bath Tub</div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Tile Splash to Height</label><input class="field-input" type="text" id="fm-mbt-ht" placeholder="ft / in"></div>
+          <div><label class="field-label">Deck Field (SF)</label><input class="field-input" type="text" id="fm-mbt-deck" placeholder="SF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Splash Field (SF)</label><input class="field-input" type="text" id="fm-mbt-splash" placeholder="SF"></div>
+          <div><label class="field-label">Splash Trim (LF)</label><input class="field-input" type="text" id="fm-mbt-splash-trim" placeholder="LF"></div>
+        </div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Face Field (SF)</label><input class="field-input" type="text" id="fm-mbt-face" placeholder="SF"></div>
+          <div><label class="field-label">Out Corners (EA)</label><input class="field-input" type="text" id="fm-mbt-corners" placeholder="EA"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">Floors</div>
+        <div class="field-group two-col">
+          <div><label class="field-label">Floor Substrate — 1st Floor</label><input class="field-input" type="text" id="fm-fl-1st" placeholder="Substrate type"></div>
+          <div><label class="field-label">Raised Foundation?</label><input class="field-input" type="text" id="fm-fl-raised" placeholder="Yes / No"></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Floor Substrate — 2nd Floor</label>
+          <input class="field-input" type="text" id="fm-fl-2nd" placeholder="Substrate type">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Floor Notes / Area Descriptions</label>
+          <textarea class="field-input xl" id="fm-fl-notes" placeholder="Describe areas, net quantities, existing material, and demo requirements..."></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-title">General Notes</div>
+        <div class="field-group">
+          <textarea class="field-input xl" id="fm-notes" placeholder="All counters and walls must include a plan drawn on graph paper with measures. All areas require photos."></textarea>
+        </div>
+      </div>
+    `
+  },
+
+  vehicle: {
+    title: 'Monthly Vehicle Inspection',
+    render: () => `
+      <div class="form-section">
+        <div class="section-title">Vehicle &amp; Employee</div>
+        <div class="field-group">
+          <label class="field-label">Employee Name</label>
+          <input class="field-input" type="text" id="veh-employee" placeholder="Employee name">
+        </div>
+        <div class="field-group two-col">
+          <div>
+            <label class="field-label">License Plate</label>
+            <input class="field-input" type="text" id="veh-plate" placeholder="Plate number">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input class="field-input" type="date" id="veh-date">
+          </div>
+        </div>
+      </div>
+      ${buildVehicleForm()}
+    `
+  }
+};
+
+// ── SCREEN NAVIGATION ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function openForm(key) {
+  currentFormKey = key;
+  const f = forms[key];
+  const s = loadSettings();
+  document.getElementById('formTitle').textContent = f.title;
+  let html = f.render();
+  // Append photo notes section to every form
+  html += `<div class="form-section">
+    <div class="section-title">Photo Reference Notes</div>
+    <div class="field-group">
+      <label class="field-label">Photo descriptions / reference notes</label>
+      <textarea class="field-input xl" id="photo-notes" placeholder="List photos taken at this site: e.g. Photo 1 - Kitchen backsplash north wall&#10;Photo 2 - Master bath shower niche&#10;Photo 3 - Damaged tile at lot entry..."></textarea>
+    </div>
+    <p style="font-size:13px;color:#999;margin-top:8px;line-height:1.5;">Use your iPad camera app to take photos, then reference them here by number or description. Attach photos to the email when you send the PDF.</p>
+  </div>`;
+  document.getElementById('formBody').innerHTML = html;
+  showScreen('formview');
+  document.getElementById('formBody').scrollTop = 0;
+  // Set today's date on date fields
+  const today = new Date().toISOString().split('T')[0];
+  document.querySelectorAll('input[type=date]').forEach(el => { if(!el.value) el.value = today; });
+  // Auto-fill superintendent name into common fields
+  if (s.superName) {
+    const superFields = ['so-super','qa-super','ewa-super','fm-super','veh-employee','ir-inspector'];
+    superFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value) el.value = s.superName;
+    });
+  }
+}
+
+function goHome() {
+  showScreen('home');
+  currentFormKey = null;
+  renderDraftsList();
+}
+
+// ── INTERACTIVE HELPERS ──
+function toggleCheck(wrapper) {
+  const cb = wrapper.querySelector('input[type=checkbox]');
+  cb.checked = !cb.checked;
+  wrapper.classList.toggle('checked', cb.checked);
+}
+
+function selectRadio(groupId, value) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.radio-item').forEach(item => {
+    const radio = item.querySelector('input[type=radio]');
+    const match = radio.value === value;
+    radio.checked = match;
+    item.classList.toggle('selected', match);
+  });
+}
+
+function clearForm() {
+  if(confirm('Clear all entries on this form?')) {
+    openForm(currentFormKey);
+  }
+}
+
+// ── PDF GENERATION ──
+function gv(id) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  return (el.value || '').trim();
+}
+
+function getChecked(name) {
+  return Array.from(document.querySelectorAll(`input[type=checkbox][value]:checked`)).map(e=>e.value).join(', ') || 'None selected';
+}
+
+function getRadio(name) {
+  const el = document.querySelector(`input[type=radio][name="${name}"]:checked`);
+  return el ? el.value : 'Not selected';
+}
+
+function exportPDF() {
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF library loading, please try again in a moment...');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+
+  const margin = 20;
+  const pageW = 216;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  // Header
+  doc.setFillColor(15, 27, 45);
+  doc.rect(0, 0, pageW, 28, 'F');
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(201, 168, 76);
+  doc.text('ANDREW LAUREN INTERIORS', margin, 12);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 180, 180);
+  doc.text('8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121 · (858) 793-5319', margin, 19);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(forms[currentFormKey].title.toUpperCase(), margin, 26);
+  y = 38;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(30, 30, 30);
+
+  function section(title) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFillColor(240, 237, 230);
+    doc.rect(margin, y, contentW, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 80, 20);
+    doc.text(title.toUpperCase(), margin + 2, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 30, 30);
+    y += 10;
+  }
+
+  function field(label, value, wide) {
+    if (y > 255) { doc.addPage(); y = 20; }
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, margin, y);
+    y += 4;
+    doc.setFontSize(11);
+    doc.setTextColor(20, 20, 20);
+    const lines = doc.splitTextToSize(value || '—', contentW);
+    lines.forEach(line => {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.text(line, margin, y);
+      y += 5.5;
+    });
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y, margin + contentW, y);
+    y += 5;
+  }
+
+  function twoField(l1, v1, l2, v2) {
+    if (y > 255) { doc.addPage(); y = 20; }
+    const half = (contentW - 8) / 2;
+    doc.setFontSize(8); doc.setTextColor(100,100,100);
+    doc.text(l1, margin, y);
+    doc.text(l2, margin + half + 8, y);
+    y += 4;
+    doc.setFontSize(11); doc.setTextColor(20,20,20);
+    doc.text(v1||'—', margin, y);
+    doc.text(v2||'—', margin + half + 8, y);
+    y += 5.5;
+    doc.setDrawColor(200,200,200);
+    doc.line(margin, y, margin+half, y);
+    doc.line(margin+half+8, y, margin+contentW, y);
+    y += 5;
+  }
+
+  // ── BUILD PDF BY FORM ──
+  if (currentFormKey === 'signoff') {
+    section('Project Information');
+    twoField('Homeowner', gv('so-homeowner'), 'Builder', gv('so-builder'));
+    twoField('Development + Lot #', gv('so-dev'), 'Super', gv('so-super'));
+    field('Address', gv('so-address'));
+    field('Date', gv('so-date'));
+    section('Scope of Work');
+    field('', gv('so-scope'));
+    section('Andrew Lauren Field Rep');
+    twoField('Print Name', gv('so-rep-name'), 'Date', gv('so-rep-date'));
+    field('Signature', gv('so-rep-sig'));
+    section('Homeowner / Super');
+    twoField('Print Name', gv('so-hw-name'), 'Date', gv('so-hw-date'));
+    field('Signature', gv('so-hw-sig'));
+    y += 4;
+    doc.setFontSize(9); doc.setTextColor(100,100,100);
+    doc.text('By signing this document, I have acknowledged that I have received all stated deliverables to a quality level that is acceptable.', margin, y, {maxWidth: contentW});
+
+  } else if (currentFormKey === 'inspection') {
+    section('Job Information');
+    twoField('Lot / Tract Name', gv('ir-lot'), 'Inspection Date', gv('ir-date'));
+    field('Homeowner Name', gv('ir-hw-name'));
+    field('Address', gv('ir-address'));
+    twoField('Homeowner Phone', gv('ir-phone'), 'Inspector Name', gv('ir-inspector'));
+    field('Access', getRadio('ir-access'));
+    section('Issue Details');
+    field('Issue Type', getChecked('issue-type'));
+    field('Additional Material Needed?', getRadio('ir-material'));
+    field('Material Needed to Fix Issue', gv('ir-material-list'));
+    field('Issue Billable?', getRadio('ir-billable'));
+    field('Suggested Repair', gv('ir-repair'));
+    section('Sign-Off');
+    twoField('Signature', gv('ir-sig'), 'Date', gv('ir-sigdate'));
+    y += 6;
+    doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+    doc.text('All ALI Customer Service Field Inspections are conducted as a courtesy to our subcontractors to assess and mitigate lost time.', margin, y, {maxWidth: contentW});
+
+  } else if (currentFormKey === 'quality') {
+    section('Walk Information');
+    field('Inspection Date', gv('qa-date'));
+    field('Lot & Tract', gv('qa-lot'));
+    field('Field Supervisor', gv('qa-super'));
+    section('Description Memo');
+    field('', gv('qa-memo'));
+    section('Field Notes');
+    field('', gv('qa-notes'));
+    section('Sign-Off');
+    twoField('Signature', gv('qa-sig'), 'Date', gv('qa-sigdate'));
+
+  } else if (currentFormKey === 'ewa') {
+    section('Project Information');
+    twoField('Date', gv('ewa-date'), 'Project', gv('ewa-project'));
+    twoField('Lot Number', gv('ewa-lot'), 'Field Supervisor', gv('ewa-super'));
+    field('Bill To', gv('ewa-billto'));
+    section('Work Items & Pricing');
+    // table header
+    doc.setFillColor(230, 227, 220);
+    doc.rect(margin, y, contentW, 7, 'F');
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(50,50,50);
+    doc.text('Description / Item', margin+2, y+5);
+    doc.text('Price', margin+contentW-25, y+5);
+    y += 9; doc.setFont('helvetica','normal');
+    let total = 0;
+    for(let i=0;i<ewaRows;i++){
+      const desc = gv('ewa-desc-'+i);
+      const price = gv('ewa-price-'+i);
+      if(desc || price){
+        if(y > 255){ doc.addPage(); y=20; }
+        doc.setFontSize(10); doc.setTextColor(20,20,20);
+        doc.text(desc||'—', margin+2, y);
+        doc.text(price||'', margin+contentW-25, y);
+        y+=6;
+        doc.setDrawColor(220,220,220);
+        doc.line(margin, y, margin+contentW, y);
+        y+=2;
+        const p = parseFloat(price);
+        if(!isNaN(p)) total+=p;
+      }
+    }
+    y+=4;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(15,27,45);
+    doc.text('TOTAL: $'+total.toFixed(2), margin+contentW-50, y, {align:'left'});
+    y+=8;
+    doc.setFont('helvetica','normal');
+    section('Special Instructions');
+    field('', gv('ewa-instructions'));
+    section('Authorization');
+    twoField('Name', gv('ewa-name'), 'Date', gv('ewa-sigdate'));
+    field('Signature', gv('ewa-sig'));
+    y+=4;
+    doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+    doc.text('Builder must have office approval and signed EWA prior to performing work. Purchase order must be received within 30 days.', margin, y, {maxWidth:contentW});
+
+  } else if (currentFormKey === 'fieldmeasure') {
+    section('Job Information');
+    field('VIP / Side Job Name', gv('fm-name'));
+    twoField('Field Measure Superintendent', gv('fm-super'), 'Date', gv('fm-date'));
+    section('Kitchen Backsplash');
+    twoField('Requires Demo?', gv('fm-kit-demo'), 'Existing Material', gv('fm-kit-mat'));
+    twoField('Backsplash Net Qty (SF)', gv('fm-kit-splash-sf'), 'Splash Full Height (SF)', gv('fm-kit-fh-sf'));
+    twoField('Splash Full Ht Trim (LF)', gv('fm-kit-fh-lf'), 'Splash Corners (EA)', gv('fm-kit-corners'));
+    twoField('Window Trim (LF)', gv('fm-kit-win'), 'Height to Cabinet', gv('fm-kit-ht'));
+    section('Counters — Kitchen & Laundry');
+    twoField('Kitchen Counter Net Qty', gv('fm-kit-ctr'), 'Laundry Counter Net Qty', gv('fm-lnd-ctr'));
+    twoField('Kitchen Backsplash Liner (LF)', gv('fm-kit-liner'), 'Laundry Backsplash Liner (LF)', gv('fm-lnd-liner'));
+    twoField('Kitchen Deck Field (SF)', gv('fm-kit-deck-sf'), 'Laundry Deck Field (SF)', gv('fm-lnd-deck-sf'));
+    section('Master Bath Counter');
+    twoField('Requires Demo?', gv('fm-mb-demo'), 'Counter Net Qty', gv('fm-mb-ctr'));
+    twoField('Backsplash Liner (LF)', gv('fm-mb-liner'), 'Backsplash Trim (LF)', gv('fm-mb-trim'));
+    twoField('Deck Field (SF)', gv('fm-mb-deck-sf'), 'Deck Trim (LF)', gv('fm-mb-deck-lf'));
+    section('Master Bath Shower');
+    twoField('Tile Walls to Height', gv('fm-mbs-ht'), 'Walls (SF)', gv('fm-mbs-walls'));
+    twoField('To Ceiling Add (SF)', gv('fm-mbs-ceil'), 'Ceiling Height', gv('fm-mbs-ceilht'));
+    twoField('Floor Field (SF)', gv('fm-mbs-floor'), 'Trim (LF)', gv('fm-mbs-trim'));
+    twoField('Niches (EA)', gv('fm-mbs-niches'), 'Out Corners (EA)', gv('fm-mbs-corners'));
+    twoField('Seats (EA)', gv('fm-mbs-seats'), 'Eye Level Liner (LF)', gv('fm-mbs-liner'));
+    section('Master Bath Tub');
+    twoField('Tile Splash to Height', gv('fm-mbt-ht'), 'Deck Field (SF)', gv('fm-mbt-deck'));
+    twoField('Splash Field (SF)', gv('fm-mbt-splash'), 'Splash Trim (LF)', gv('fm-mbt-splash-trim'));
+    twoField('Face Field (SF)', gv('fm-mbt-face'), 'Out Corners (EA)', gv('fm-mbt-corners'));
+    section('Floors');
+    twoField('Floor Substrate — 1st Floor', gv('fm-fl-1st'), 'Raised Foundation?', gv('fm-fl-raised'));
+    field('Floor Substrate — 2nd Floor', gv('fm-fl-2nd'));
+    field('Floor Notes', gv('fm-fl-notes'));
+    section('General Notes');
+    field('', gv('fm-notes'));
+
+  } else if (currentFormKey === 'vehicle') {
+    section('Vehicle & Employee');
+    field('Employee Name', gv('veh-employee'));
+    twoField('License Plate', gv('veh-plate'), 'Date', gv('veh-date'));
+    vehSections.forEach((sec, si) => {
+      section(sec.title);
+      sec.items.forEach((item, ii) => {
+        const key = `${si}-${ii}`;
+        const val = vehState[key];
+        const status = val === 'ok' ? '✓ ADEQUATE' : val === 'bad' ? '✗ INADEQUATE' : 'Not checked';
+        if(y > 255){ doc.addPage(); y=20; }
+        doc.setFontSize(10);
+        doc.setTextColor(val==='ok'?30:val==='bad'?180:100, val==='ok'?120:20, val==='ok'?30:20);
+        doc.text(`${item}`, margin+2, y);
+        doc.setFont('helvetica','bold');
+        doc.text(status, margin+contentW-35, y);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(20,20,20);
+        y+=6;
+      });
+    });
+    if(gv('veh-notes')){
+      section('Notes');
+      field('', gv('veh-notes'));
+    }
+  }
+
+  // Photo notes (appended to every form)
+  const photoNotes = gv('photo-notes');
+  if (photoNotes) {
+    section('Photo Reference Notes');
+    field('', photoNotes);
+  }
+
+  // Footer on all pages
+  const settings = loadSettings();
+  const superLine = settings.superName ? ` · Submitted by: ${settings.superName}` : '';
+  const totalPages = doc.internal.getNumberOfPages();
+  for(let p=1; p<=totalPages; p++){
+    doc.setPage(p);
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text(`Andrew Lauren Interiors · ${forms[currentFormKey].title}${superLine} · Page ${p} of ${totalPages}`, margin, 272);
+  }
+
+  // Save PDF and open Mail
+  const formName = forms[currentFormKey].title.replace(/\s+/g, '_');
+  const today = new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'}).replace(/\//g,'-');
+  const fileName = `ALI_${formName}_${today}.pdf`;
+  doc.save(fileName);
+
+  // Build mailto with settings
+  const toAddr = settings.officeEmail || '';
+  const ccAddr = settings.myEmail || '';
+  const superTag = settings.superName ? ` — ${settings.superName}` : '';
+  const subject = encodeURIComponent(`ALI Field Form: ${forms[currentFormKey].title}${superTag} — ${today}`);
+  const bodyText = `Please find attached the completed ${forms[currentFormKey].title} form.\n\nSubmitted by: ${settings.superName || 'Field Superintendent'}\nDate: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}\n\n— Sent from the ALI Field Portal`;
+  const body = encodeURIComponent(bodyText);
+
+  let mailtoUrl = `mailto:${toAddr}?subject=${subject}&body=${body}`;
+  if (ccAddr) mailtoUrl += `&cc=${encodeURIComponent(ccAddr)}`;
+
+  showToast('PDF saved! Opening Mail...');
+  setTimeout(() => { window.location.href = mailtoUrl; }, 700);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
