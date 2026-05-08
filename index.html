@@ -392,7 +392,7 @@ const FORM_ICONS = { signoff:'✍️', inspection:'🔍', quality:'🏅', ewa:'�
 function collectFormData() {
   const data = {};
   document.querySelectorAll('#formBody input, #formBody textarea').forEach(el => {
-    if (el.id) data[el.id] = el.value;
+    if (el.id && el.type !== 'file') data[el.id] = el.value;
   });
   document.querySelectorAll('#formBody input[type=radio]:checked').forEach(el => {
     data['__radio__' + el.name] = el.value;
@@ -401,13 +401,7 @@ function collectFormData() {
     data['__check__' + el.id] = el.checked;
   });
   Object.keys(vehState).forEach(k => { data['__veh__' + k] = vehState[k]; });
-  // Save signature images
-  const sigHW = getSigDataURL('hw');
-  const sigRep = getSigDataURL('rep');
-  if (sigHW) data['__sig__hw'] = sigHW;
-  if (sigRep) data['__sig__rep'] = sigRep;
-  // Save photos
-  if (formPhotos.length) data['__photos__'] = JSON.stringify(formPhotos);
+  // NOTE: signatures and photos are intentionally excluded from drafts (too large for localStorage)
   return data;
 }
 
@@ -432,22 +426,8 @@ function restoreFormData(data) {
     } else if (key.startsWith('__veh__')) {
       const vkey = key.replace('__veh__', '');
       if (val) setVeh(vkey, val);
-    } else if (key.startsWith('__sig__')) {
-      const sigId = key.replace('__sig__', '');
-      const pad = sigPads[sigId];
-      if (pad && val) {
-        const img = new Image();
-        img.onload = () => {
-          pad.ctx.drawImage(img, 0, 0, pad.canvas.width / window.devicePixelRatio, pad.canvas.height / window.devicePixelRatio);
-          pad.hint.classList.add('hidden');
-        };
-        img.src = val;
-      }
-    } else if (key === '__photos__') {
-      try {
-        formPhotos = JSON.parse(val) || [];
-        setTimeout(renderPhotoGrid, 100);
-      } catch(e) {}
+    } else if (key.startsWith('__sig__') || key === '__photos__') {
+      // not saved in drafts — skip
     } else {
       const el = document.getElementById(key);
       if (el) el.value = val;
@@ -594,27 +574,38 @@ function clearAllDrafts() {
 
 // ── DATE / GREETING ──
 (function(){
-  // Clean up any malformed drafts on load
-  const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
-  }
-  keys.forEach(k => {
-    try {
-      const raw = JSON.parse(localStorage.getItem(k));
-      if (!raw || !raw.formKey || !raw.savedAt) localStorage.removeItem(k);
-    } catch(e) { localStorage.removeItem(k); }
-  });
+  try {
+    // Nuke any oversized or malformed drafts on load
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
+    }
+    keys.forEach(k => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(k));
+        if (!raw || !raw.formKey || !raw.savedAt) { localStorage.removeItem(k); return; }
+        // Remove if stored data is too large (signatures/photos bloating it)
+        const size = (localStorage.getItem(k) || '').length;
+        if (size > 500000) { localStorage.removeItem(k); return; } // 500kb limit per draft
+      } catch(e) { localStorage.removeItem(k); }
+    });
+  } catch(e) {}
 
-  const now = new Date();
-  document.getElementById('homeDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const h = now.getHours();
-  const s = loadSettings();
-  const namepart = s.superName ? ', ' + s.superName.split(' ')[0] : '';
-  document.getElementById('homeGreet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + namepart;
-  updateSuperBadge();
-  renderDraftsList();
+  try {
+    const now = new Date();
+    document.getElementById('homeDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const h = now.getHours();
+    const s = loadSettings();
+    const namepart = s.superName ? ', ' + s.superName.split(' ')[0] : '';
+    document.getElementById('homeGreet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + namepart;
+    updateSuperBadge();
+  } catch(e) {}
+
+  try { renderDraftsList(); } catch(e) {
+    const el = document.getElementById('drafts-list');
+    if (el) el.innerHTML = '<div class="no-drafts">No saved drafts yet</div>';
+  }
 })();
 
 // ── VEHICLE CHECKLIST DATA ──
