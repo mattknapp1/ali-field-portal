@@ -284,7 +284,7 @@
 
   <div class="section-hdr" style="display:flex;align-items:center;justify-content:space-between;padding-right:18px;">
     <span>Saved Drafts</span>
-    <span id="draft-count" style="color:rgba(255,255,255,0.25);font-size:11px;"></span>
+    <span id="draft-count" style="color:rgba(255,255,255,0.25);font-size:11px;cursor:pointer;" onclick="clearAllDrafts()"></span>
   </div>
   <div class="drafts-section" id="drafts-list"></div>
 
@@ -482,23 +482,48 @@ function renderDraftsList() {
     return;
   }
   if (countEl) countEl.textContent = drafts.length + ' draft' + (drafts.length > 1 ? 's' : '');
-  el.innerHTML = drafts.map(d => {
+  el.innerHTML = drafts.map((d, i) => {
     const icon = FORM_ICONS[d.formKey] || '📄';
     const formTitle = (forms[d.formKey] || {}).title || d.formKey;
-    const date = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    const preview = d.preview || 'No details';
-    return `<div class="draft-card">
+    let dateStr = '';
+    try { dateStr = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + new Date(d.savedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); } catch(e) { dateStr = 'Saved'; }
+    const preview = d.preview || 'In progress';
+    return `<div class="draft-card" data-idx="${i}">
       <div class="draft-icon">${icon}</div>
       <div class="draft-info">
         <div class="draft-title">${formTitle}</div>
-        <div class="draft-meta">${date} · ${preview}</div>
+        <div class="draft-meta">${dateStr} · ${preview}</div>
       </div>
       <div class="draft-actions">
-        <button class="draft-resume" onclick="resumeDraft('${d.storageKey}','${d.formKey}')">Resume</button>
-        <button class="draft-delete" onclick="deleteDraft(event,'${d.storageKey}')" aria-label="Delete draft">✕</button>
+        <button class="draft-resume" data-action="resume" data-idx="${i}">Resume</button>
+        <button class="draft-delete" data-action="delete" data-idx="${i}" aria-label="Delete">✕</button>
       </div>
     </div>`;
   }).join('');
+
+  // Store drafts array on element for event delegation
+  el._drafts = drafts;
+
+  // Single delegated listener — no inline onclick strings
+  el.onclick = (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    e.stopPropagation();
+    const idx = parseInt(btn.dataset.idx);
+    const draft = el._drafts[idx];
+    if (!draft) return;
+    if (btn.dataset.action === 'resume') {
+      resumeDraft(draft.storageKey, draft.formKey);
+    } else if (btn.dataset.action === 'delete') {
+      showConfirm('Delete this draft?', 'This cannot be undone.', 'Delete').then(ok => {
+        if (ok) {
+          localStorage.removeItem(draft.storageKey);
+          renderDraftsList();
+          showToast('Draft deleted');
+        }
+      });
+    }
+  };
 }
 
 function saveDraft() {
@@ -536,14 +561,17 @@ function resumeDraft(storageKey, formKey) {
   } catch(e) { showToast('Could not load draft'); }
 }
 
-function deleteDraft(e, storageKey) {
-  e.stopPropagation();
-  showConfirm('Delete this draft?', 'This cannot be undone.', 'Delete').then(ok => {
-    if (ok) {
-      localStorage.removeItem(storageKey);
-      renderDraftsList();
-      showToast('Draft deleted');
+function clearAllDrafts() {
+  showConfirm('Clear all drafts?', 'All saved drafts will be deleted.', 'Clear All').then(ok => {
+    if (!ok) return;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
     }
+    keys.forEach(k => localStorage.removeItem(k));
+    renderDraftsList();
+    showToast('All drafts cleared');
   });
 }
 
