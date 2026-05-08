@@ -594,6 +594,19 @@ function clearAllDrafts() {
 
 // ── DATE / GREETING ──
 (function(){
+  // Clean up any malformed drafts on load
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
+  }
+  keys.forEach(k => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(k));
+      if (!raw || !raw.formKey || !raw.savedAt) localStorage.removeItem(k);
+    } catch(e) { localStorage.removeItem(k); }
+  });
+
   const now = new Date();
   document.getElementById('homeDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const h = now.getHours();
