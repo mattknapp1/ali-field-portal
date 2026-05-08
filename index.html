@@ -1468,11 +1468,19 @@ function exportPDF() {
   logoImg.crossOrigin = 'anonymous';
   logoImg.onload = () => {
     const c = document.createElement('canvas'); c.width=560; c.height=140;
-    c.getContext('2d').drawImage(logoImg,0,0,560,140);
+    const lctx = c.getContext('2d');
+    lctx.fillStyle = '#0f1b2d';
+    lctx.fillRect(0, 0, 560, 140);
+    // Center the logo vertically with padding
+    const aspect = logoImg.naturalWidth / logoImg.naturalHeight;
+    const drawH = 100, drawW = drawH * aspect;
+    const drawX = (560 - drawW) / 2, drawY = (140 - drawH) / 2;
+    lctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
     renderPDF(c.toDataURL('image/png'));
   };
   logoImg.onerror = () => renderPDF(null);
-  logoImg.src = 'https://www.andrewlauren.com/wp-content/uploads/2023/11/andrew-lauren-logo_white.svg';
+  // Try PNG first (avoids SVG CORS canvas taint), fallback handled by onerror
+  logoImg.src = 'https://www.andrewlauren.com/wp-content/uploads/2023/11/andrew-lauren-logo_white.svg?v=' + Date.now();
 
   function renderPDF(logoDataURL) {
     const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
@@ -1505,36 +1513,48 @@ function exportPDF() {
       doc.line(margin,y,margin+half,y); doc.line(margin+half+8,y,margin+contentW,y); y+=5;
     }
 
+    // ── Helper: format ISO date string to readable ──
+    function fmtDate(val) {
+      if (!val) return '—';
+      try {
+        const [y,m,d] = val.split('-');
+        const dt = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+        return dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+      } catch(e) { return val; }
+    }
+
     // Header
-    doc.setFillColor(15,27,45); doc.rect(0,0,pageW,32,'F');
-    if(logoDataURL){try{doc.addImage(logoDataURL,'PNG',margin,3,72,18);}catch(e){}}
-    if(!logoDataURL){
+    doc.setFillColor(15,27,45); doc.rect(0,0,pageW,36,'F');
+    if(logoDataURL){try{doc.addImage(logoDataURL,'PNG',margin,2,88,22);}catch(e){
       doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(201,168,76);
-      doc.text('ANDREW LAUREN INTERIORS',margin,14);
+      doc.text('ANDREW LAUREN INTERIORS',margin,16);
+    }} else {
+      doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(201,168,76);
+      doc.text('ANDREW LAUREN INTERIORS',margin,16);
     }
     doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(160,160,160);
-    doc.text('8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121 · (858) 793-5319',margin,25);
+    doc.text('8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121 · (858) 793-5319',margin,29);
     doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-    doc.text(forms[currentFormKey].title.toUpperCase(),pageW-margin,25,{align:'right'});
-    y=42; doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+    doc.text(forms[currentFormKey].title.toUpperCase(),pageW-margin,29,{align:'right'});
+    y=46; doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
 
     // Form content
     if(currentFormKey==='signoff'){
       section('Project Information');
       twoField('Homeowner',gv('so-homeowner'),'Builder',gv('so-builder'));
       twoField('Development + Lot #',gv('so-dev'),'Super',gv('so-super'));
-      field('Address',gv('so-address')); field('Date',gv('so-date'));
+      field('Address',gv('so-address')); field('Date',fmtDate(gv('so-date')));
       section('Scope of Work'); field('',gv('so-scope'));
       section('Andrew Lauren Field Rep');
-      twoField('Print Name',gv('so-rep-name'),'Date',gv('so-rep-date'));
+      twoField('Print Name',gv('so-rep-name'),'Date',fmtDate(gv('so-rep-date')));
       section('Homeowner / Super');
-      twoField('Print Name',gv('so-hw-name'),'Date',gv('so-hw-date'));
+      twoField('Print Name',gv('so-hw-name'),'Date',fmtDate(gv('so-hw-date')));
       y+=4; doc.setFontSize(9); doc.setTextColor(100,100,100);
       doc.text('By signing this document, I have acknowledged that I have received all stated deliverables to a quality level that is acceptable.',margin,y,{maxWidth:contentW});
 
     } else if(currentFormKey==='inspection'){
       section('Job Information');
-      twoField('Lot / Tract Name',gv('ir-lot'),'Inspection Date',gv('ir-date'));
+      twoField('Lot / Tract Name',gv('ir-lot'),'Inspection Date',fmtDate(gv('ir-date')));
       field('Homeowner Name',gv('ir-hw-name')); field('Address',gv('ir-address'));
       twoField('Homeowner Phone',gv('ir-phone'),'Inspector Name',gv('ir-inspector'));
       field('Access',getRadio('ir-access'));
@@ -1544,20 +1564,20 @@ function exportPDF() {
       field('Material Needed to Fix Issue',gv('ir-material-list'));
       field('Issue Billable?',getRadio('ir-billable'));
       field('Suggested Repair',gv('ir-repair'));
-      section('Sign-Off'); field('Date',gv('ir-sigdate'));
+      section('Sign-Off'); field('Date',fmtDate(gv('ir-sigdate')));
       y+=4; doc.setFontSize(8.5); doc.setTextColor(100,100,100);
       doc.text('All ALI Customer Service Field Inspections are conducted as a courtesy to our subcontractors to assess and mitigate lost time.',margin,y,{maxWidth:contentW});
 
     } else if(currentFormKey==='quality'){
       section('Walk Information');
-      field('Inspection Date',gv('qa-date')); field('Lot & Tract',gv('qa-lot')); field('Field Supervisor',gv('qa-super'));
+      field('Inspection Date',fmtDate(gv('qa-date'))); field('Lot & Tract',gv('qa-lot')); field('Field Supervisor',gv('qa-super'));
       section('Description Memo'); field('',gv('qa-memo'));
       section('Field Notes'); field('',gv('qa-notes'));
-      section('Sign-Off'); field('Date',gv('qa-sigdate'));
+      section('Sign-Off'); field('Date',fmtDate(gv('qa-sigdate')));
 
     } else if(currentFormKey==='ewa'){
       section('Project Information');
-      twoField('Date',gv('ewa-date'),'Project',gv('ewa-project'));
+      twoField('Date',fmtDate(gv('ewa-date')),'Project',gv('ewa-project'));
       twoField('Lot Number',gv('ewa-lot'),'Field Supervisor',gv('ewa-super'));
       field('Bill To',gv('ewa-billto'));
       section('Work Items & Pricing');
@@ -1579,14 +1599,14 @@ function exportPDF() {
       y+=4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(15,27,45);
       doc.text('TOTAL: $'+total.toFixed(2),margin+contentW-50,y); y+=8; doc.setFont('helvetica','normal');
       section('Special Instructions'); field('',gv('ewa-instructions'));
-      section('Authorization'); twoField('Name',gv('ewa-name'),'Date',gv('ewa-sigdate'));
+      section('Authorization'); twoField('Name',gv('ewa-name'),'Date',fmtDate(gv('ewa-sigdate')));
       y+=4; doc.setFontSize(8.5); doc.setTextColor(100,100,100);
       doc.text('Builder must have office approval and signed EWA prior to performing work. PO must be received within 30 days.',margin,y,{maxWidth:contentW});
 
     } else if(currentFormKey==='fieldmeasure'){
       section('Job Information');
       field('VIP / Side Job Name',gv('fm-name'));
-      twoField('Field Measure Superintendent',gv('fm-super'),'Date',gv('fm-date'));
+      twoField('Field Measure Superintendent',gv('fm-super'),'Date',fmtDate(gv('fm-date')));
       section('Kitchen Backsplash');
       twoField('Requires Demo?',gv('fm-kit-demo'),'Existing Material',gv('fm-kit-mat'));
       twoField('Backsplash Net Qty (SF)',gv('fm-kit-splash-sf'),'Splash Full Height (SF)',gv('fm-kit-fh-sf'));
@@ -1619,7 +1639,7 @@ function exportPDF() {
     } else if(currentFormKey==='vehicle'){
       section('Vehicle & Employee');
       field('Employee Name',gv('veh-employee'));
-      twoField('License Plate',gv('veh-plate'),'Date',gv('veh-date'));
+      twoField('License Plate',gv('veh-plate'),'Date',fmtDate(gv('veh-date')));
       vehSections.forEach((sec,si)=>{
         section(sec.title);
         sec.items.forEach((item,ii)=>{
@@ -1654,27 +1674,53 @@ function exportPDF() {
       });
     }
 
-    // Signatures
-    const sigHW=getSigDataURL('hw'), sigRep=getSigDataURL('rep');
-    const repName=gv('sig-rep-name');
-    if(sigHW||sigRep||repName){
+    // Signatures — match per-form rules
+    const pdfNoRepSig = ['fieldmeasure','quality','ewa','inspection'];
+    const pdfNoHWSig = ['vehicle'];
+    const showHW = !pdfNoHWSig.includes(currentFormKey);
+    const showRep = !pdfNoRepSig.includes(currentFormKey) && !pdfNoHWSig.includes(currentFormKey) || pdfNoHWSig.includes(currentFormKey);
+    const sigHW = showHW ? getSigDataURL('hw') : null;
+    const sigRep = showRep ? getSigDataURL('rep') : null;
+    const repName = showRep ? gv('sig-rep-name') : null;
+
+    if(sigHW||sigRep||repName||(showHW&&!showRep)){
       if(y>220){doc.addPage();y=20;}
       section('Signatures');
-      const sigW=(contentW-10)/2, sigH=28;
-      doc.setFontSize(8); doc.setTextColor(100,100,100);
-      doc.text('Homeowner / Super',margin,y); doc.text('ALI Field Rep',margin+sigW+10,y); y+=4;
-      doc.setDrawColor(200,200,200);
-      doc.rect(margin,y,sigW,sigH); doc.rect(margin+sigW+10,y,sigW,sigH);
-      if(sigHW){try{doc.addImage(sigHW,'PNG',margin+1,y+1,sigW-2,sigH-2);}catch(e){}}
-      if(sigRep){try{doc.addImage(sigRep,'PNG',margin+sigW+11,y+1,sigW-2,sigH-2);}catch(e){}}
-      y+=sigH+4;
-      if(repName){
-        doc.setFontSize(9); doc.setTextColor(60,60,60);
-        doc.text('Print Name: '+repName, margin+sigW+10, y);
+      const sigDate=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+      if(showHW && showRep){
+        // Two boxes side by side
+        const sigW=(contentW-10)/2, sigH=28;
+        doc.setFontSize(8); doc.setTextColor(100,100,100);
+        doc.text('Homeowner / Super',margin,y); doc.text('ALI Field Rep',margin+sigW+10,y); y+=4;
+        doc.setDrawColor(200,200,200);
+        doc.rect(margin,y,sigW,sigH); doc.rect(margin+sigW+10,y,sigW,sigH);
+        if(sigHW){try{doc.addImage(sigHW,'PNG',margin+1,y+1,sigW-2,sigH-2);}catch(e){}}
+        if(sigRep){try{doc.addImage(sigRep,'PNG',margin+sigW+11,y+1,sigW-2,sigH-2);}catch(e){}}
+        y+=sigH+4;
+        if(repName){doc.setFontSize(9);doc.setTextColor(60,60,60);doc.text('Print Name: '+repName,margin+sigW+10,y);}
+        y+=6;
+        doc.setFontSize(9);doc.setTextColor(100,100,100);doc.text('Date: '+sigDate,margin,y);
+      } else if(showHW && !showRep){
+        // Homeowner only — full width
+        const sigW=contentW, sigH=28;
+        doc.setFontSize(8); doc.setTextColor(100,100,100);
+        doc.text('Homeowner / Super',margin,y); y+=4;
+        doc.setDrawColor(200,200,200); doc.rect(margin,y,sigW,sigH);
+        if(sigHW){try{doc.addImage(sigHW,'PNG',margin+1,y+1,sigW-2,sigH-2);}catch(e){}}
+        y+=sigH+6;
+        doc.setFontSize(9);doc.setTextColor(100,100,100);doc.text('Date: '+sigDate,margin,y);
+      } else if(!showHW && showRep){
+        // Rep only — full width
+        const sigW=contentW, sigH=28;
+        doc.setFontSize(8); doc.setTextColor(100,100,100);
+        doc.text('ALI Field Rep',margin,y); y+=4;
+        doc.setDrawColor(200,200,200); doc.rect(margin,y,sigW,sigH);
+        if(sigRep){try{doc.addImage(sigRep,'PNG',margin+1,y+1,sigW-2,sigH-2);}catch(e){}}
+        y+=sigH+4;
+        if(repName){doc.setFontSize(9);doc.setTextColor(60,60,60);doc.text('Print Name: '+repName,margin,y);y+=5;}
+        doc.setFontSize(9);doc.setTextColor(100,100,100);doc.text('Date: '+sigDate,margin,y);
       }
-      y+=6;
-      doc.setFontSize(9); doc.setTextColor(100,100,100);
-      doc.text('Date: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),margin,y);
     }
 
     // Footer on every page
