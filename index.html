@@ -212,6 +212,14 @@
     <div class="home-greeting" id="homeGreet"></div>
   </div>
 
+  <div class="super-badge" onclick="openSettings()">
+    <div class="super-badge-left">
+      <div class="super-badge-label">Field Superintendent</div>
+      <div class="super-badge-name" id="superBadgeName"><span class="unset">Tap to set your name →</span></div>
+    </div>
+    <div class="super-badge-edit" id="superBadgeEdit"></div>
+  </div>
+
   <div class="section-hdr">Field Inspection Forms</div>
   <div class="cards-grid">
     <div class="form-card" onclick="openForm('signoff')">
@@ -302,6 +310,14 @@
   </div>
   <div class="settings-body">
     <div class="settings-card">
+      <div class="settings-card-title">Superintendent Name</div>
+      <div class="field-group">
+        <label class="field-label" style="font-size:15px;">Your full name</label>
+        <input class="field-input" type="text" id="set-super-name" placeholder="e.g. Mike Johnson" style="font-size:20px;padding:14px;">
+      </div>
+      <p class="settings-note">This name will automatically fill the Field Supervisor and Superintendent fields on every form you open.</p>
+    </div>
+    <div class="settings-card">
       <div class="settings-card-title">Your Email (CC yourself)</div>
       <div class="field-group">
         <label class="field-label" style="font-size:15px;">Keep a copy for yourself</label>
@@ -321,20 +337,41 @@ let currentFormKey = null;
 // ── SETTINGS (localStorage) ──
 function loadSettings() {
   return {
+    superName: localStorage.getItem('ali_super_name') || '',
     myEmail: localStorage.getItem('ali_my_email') || ''
   };
 }
 
 function saveSettings() {
+  const name = document.getElementById('set-super-name').value.trim();
   const mine = document.getElementById('set-my-email').value.trim();
+  localStorage.setItem('ali_super_name', name);
   localStorage.setItem('ali_my_email', mine);
+  updateSuperBadge();
   showToast('Settings saved!');
   setTimeout(goHome, 900);
 }
 
 function openSettings() {
-  document.getElementById('set-my-email').value = localStorage.getItem('ali_my_email') || '';
+  const s = loadSettings();
+  document.getElementById('set-super-name').value = s.superName;
+  document.getElementById('set-my-email').value = s.myEmail;
   showScreen('settings');
+}
+
+function updateSuperBadge() {
+  const s = loadSettings();
+  const badge = document.getElementById('superBadgeName');
+  if (!badge) return;
+  if (s.superName) {
+    badge.innerHTML = s.superName;
+    badge.className = 'super-badge-name';
+    document.getElementById('superBadgeEdit').textContent = 'Edit';
+  } else {
+    badge.innerHTML = '<span class="unset">Tap to set your name \u2192</span>';
+    badge.className = 'super-badge-name';
+    document.getElementById('superBadgeEdit').textContent = '';
+  }
 }
 
 // ── DRAFTS (localStorage) ──
@@ -505,7 +542,10 @@ function deleteDraft(e, storageKey) {
   const now = new Date();
   document.getElementById('homeDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const h = now.getHours();
-  document.getElementById('homeGreet').textContent = h < 12 ? 'Good morning, Superintendent' : h < 17 ? 'Good afternoon, Superintendent' : 'Good evening, Superintendent';
+  const s = loadSettings();
+  const namepart = s.superName ? ', ' + s.superName.split(' ')[0] : '';
+  document.getElementById('homeGreet').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + namepart;
+  updateSuperBadge();
   renderDraftsList();
 })();
 
@@ -634,10 +674,6 @@ const forms = {
             <input class="field-input" type="date" id="so-rep-date">
           </div>
         </div>
-        <div class="field-group">
-          <label class="field-label">Signature (type full name)</label>
-          <input class="field-input" type="text" id="so-rep-sig" placeholder="Type full name as signature" style="font-style:italic;font-size:19px;">
-        </div>
       </div>
       <div class="form-section">
         <div class="section-title">Homeowner / Super</div>
@@ -650,10 +686,6 @@ const forms = {
             <label class="field-label">Date</label>
             <input class="field-input" type="date" id="so-hw-date">
           </div>
-        </div>
-        <div class="field-group">
-          <label class="field-label">Signature (type full name)</label>
-          <input class="field-input" type="text" id="so-hw-sig" placeholder="Type full name as signature" style="font-style:italic;font-size:19px;">
         </div>
       </div>
     `
@@ -754,15 +786,9 @@ const forms = {
       </div>
       <div class="form-section">
         <div class="section-title">Sign-Off</div>
-        <div class="field-group two-col">
-          <div>
-            <label class="field-label">Signature (type name)</label>
-            <input class="field-input" type="text" id="ir-sig" placeholder="Type name as signature" style="font-style:italic;font-size:19px;">
-          </div>
-          <div>
-            <label class="field-label">Date</label>
-            <input class="field-input" type="date" id="ir-sigdate">
-          </div>
+        <div class="field-group">
+          <label class="field-label">Date</label>
+          <input class="field-input" type="date" id="ir-sigdate">
         </div>
       </div>
     `
@@ -800,15 +826,9 @@ const forms = {
       </div>
       <div class="form-section">
         <div class="section-title">Sign-Off</div>
-        <div class="field-group two-col">
-          <div>
-            <label class="field-label">Signature (type name)</label>
-            <input class="field-input" type="text" id="qa-sig" placeholder="Type name as signature" style="font-style:italic;font-size:19px;">
-          </div>
-          <div>
-            <label class="field-label">Date</label>
-            <input class="field-input" type="date" id="qa-sigdate">
-          </div>
+        <div class="field-group">
+          <label class="field-label">Date</label>
+          <input class="field-input" type="date" id="qa-sigdate">
         </div>
       </div>
     `
@@ -867,10 +887,6 @@ const forms = {
             <label class="field-label">Date</label>
             <input class="field-input" type="date" id="ewa-sigdate">
           </div>
-        </div>
-        <div class="field-group">
-          <label class="field-label">Signature (type full name)</label>
-          <input class="field-input" type="text" id="ewa-sig" placeholder="Type full name as signature" style="font-style:italic;font-size:19px;">
         </div>
         <p style="font-size:12px;color:#888;margin-top:10px;line-height:1.5;">Builder must have office approval and signed EWA prior to performing work. Purchase order / billing instrument must be received within 30 days after work has been completed.</p>
       </div>
@@ -1098,6 +1114,14 @@ function openForm(key) {
   document.getElementById('formBody').scrollTop = 0;
   const today = new Date().toISOString().split('T')[0];
   document.querySelectorAll('input[type=date]').forEach(el => { if(!el.value) el.value = today; });
+  // Auto-fill superintendent name
+  const s = loadSettings();
+  if (s.superName) {
+    ['so-super','qa-super','ewa-super','fm-super','veh-employee','ir-inspector'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value) el.value = s.superName;
+    });
+  }
   // Init signature pads after DOM is ready
   setTimeout(() => {
     initSigPad('hw');
@@ -1586,11 +1610,10 @@ function exportPDF() {
   const fileName = `${formName}_${dateStr}.pdf`;
   doc.save(fileName);
 
-  // Open Mail — just a clean subject, super fills in To themselves
+  // Open Mail with just subject — super attaches PDF and fills To themselves
   const myEmail = localStorage.getItem('ali_my_email') || '';
   const subject = encodeURIComponent(`${forms[currentFormKey].title} — ${dateStr}`);
-  const bodyText = `Please find the completed ${forms[currentFormKey].title} attached.\n\nDate: ${now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}\n\n— ALI Field Portal`;
-  let mailtoUrl = `mailto:${myEmail}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+  const mailtoUrl = `mailto:${myEmail}?subject=${subject}`;
 
   showToast('PDF saved! Opening Mail...');
   setTimeout(() => { window.location.href = mailtoUrl; }, 700);
