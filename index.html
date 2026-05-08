@@ -176,8 +176,8 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   /* custom confirm modal */
-  .confirm-overlay { display:flex; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:30px; opacity:0; pointer-events:none; transition: opacity 0.15s; }
-  .confirm-overlay.active { opacity:1; pointer-events:all; }
+  .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9999; align-items:center; justify-content:center; padding:30px; }
+  .confirm-overlay.active { display:flex; }
   .confirm-box { background:#1a2535; border-radius:18px; width:100%; max-width:320px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
   .confirm-msg { color:#fff; font-size:18px; font-weight:600; padding:24px 22px 8px; text-align:center; line-height:1.4; }
   .confirm-sub { color:rgba(255,255,255,0.45); font-size:14px; padding:0 22px 20px; text-align:center; }
@@ -284,7 +284,7 @@
 
   <div class="section-hdr" style="display:flex;align-items:center;justify-content:space-between;padding-right:18px;">
     <span>Saved Drafts</span>
-    <span id="draft-count" style="color:rgba(255,255,255,0.25);font-size:11px;cursor:pointer;" onclick="clearAllDrafts()"></span>
+    <span id="draft-count" style="color:rgba(255,255,255,0.25);font-size:11px;"></span>
   </div>
   <div class="drafts-section" id="drafts-list"></div>
 
@@ -292,6 +292,9 @@
     Andrew Lauren Interiors<br>
     8909 Kenamar Drive, Ste. 101 · San Diego, CA 92121<br>
     (858) 793-5319
+    <div style="margin-top:16px;">
+      <button onclick="nukeDrafts()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.3);border-radius:8px;padding:10px 18px;font-size:13px;cursor:pointer;">Clear All Draft Data</button>
+    </div>
   </div>
 </div>
 
@@ -481,6 +484,8 @@ function renderDraftsList() {
   const el = document.getElementById('drafts-list');
   const countEl = document.getElementById('draft-count');
   if (!el) return;
+  // Store globally so buttons can reference by index
+  window._draftsList = drafts;
   if (drafts.length === 0) {
     el.innerHTML = '<div class="no-drafts">No saved drafts yet</div>';
     if (countEl) countEl.textContent = '';
@@ -490,45 +495,40 @@ function renderDraftsList() {
   el.innerHTML = drafts.map((d, i) => {
     const icon = FORM_ICONS[d.formKey] || '📄';
     const formTitle = (forms[d.formKey] || {}).title || d.formKey;
-    let dateStr = '';
-    try { dateStr = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + new Date(d.savedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); } catch(e) { dateStr = 'Saved'; }
+    let dateStr = 'Saved';
+    try {
+      const dt = new Date(d.savedAt);
+      dateStr = dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    } catch(e) {}
     const preview = d.preview || 'In progress';
-    return `<div class="draft-card" data-idx="${i}">
+    return `<div class="draft-card">
       <div class="draft-icon">${icon}</div>
       <div class="draft-info">
         <div class="draft-title">${formTitle}</div>
-        <div class="draft-meta">${dateStr} · ${preview}</div>
+        <div class="draft-meta">${dateStr} &middot; ${preview}</div>
       </div>
       <div class="draft-actions">
-        <button class="draft-resume" data-action="resume" data-idx="${i}">Resume</button>
-        <button class="draft-delete" data-action="delete" data-idx="${i}" aria-label="Delete">✕</button>
+        <button class="draft-resume" ontouchend="draftResume(${i})" onclick="draftResume(${i})">Resume</button>
+        <button class="draft-delete" ontouchend="draftDelete(event,${i})" onclick="draftDelete(event,${i})">✕</button>
       </div>
     </div>`;
   }).join('');
+}
 
-  // Store drafts array on element for event delegation
-  el._drafts = drafts;
+function draftResume(i) {
+  const d = (window._draftsList||[])[i];
+  if (!d) return;
+  resumeDraft(d.storageKey, d.formKey);
+}
 
-  // Single delegated listener — no inline onclick strings
-  el.onclick = (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    e.stopPropagation();
-    const idx = parseInt(btn.dataset.idx);
-    const draft = el._drafts[idx];
-    if (!draft) return;
-    if (btn.dataset.action === 'resume') {
-      resumeDraft(draft.storageKey, draft.formKey);
-    } else if (btn.dataset.action === 'delete') {
-      showConfirm('Delete this draft?', 'This cannot be undone.', 'Delete').then(ok => {
-        if (ok) {
-          localStorage.removeItem(draft.storageKey);
-          renderDraftsList();
-          showToast('Draft deleted');
-        }
-      });
-    }
-  };
+function draftDelete(e, i) {
+  if(e) e.stopPropagation();
+  const d = (window._draftsList||[])[i];
+  if (!d) return;
+  const key = d.storageKey;
+  localStorage.removeItem(key);
+  renderDraftsList();
+  showToast('Draft deleted');
 }
 
 function saveDraft() {
@@ -566,13 +566,22 @@ function resumeDraft(storageKey, formKey) {
   } catch(e) { showToast('Could not load draft'); }
 }
 
+function nukeDrafts() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k) keys.push(k);
+  }
+  keys.forEach(k => { if (k.startsWith(DRAFT_PREFIX)) localStorage.removeItem(k); });
+  window._draftsList = [];
+  renderDraftsList();
+  showToast('Draft data cleared');
+}
+
 function clearAllDrafts() {
-  showConfirm('Clear all drafts?', 'All saved drafts will be deleted.', 'Clear All').then(ok => {
-    if (!ok) return;
-    listDrafts().forEach(d => localStorage.removeItem(d.storageKey));
-    renderDraftsList();
-    showToast('All drafts cleared');
-  });
+  listDrafts().forEach(d => localStorage.removeItem(d.storageKey));
+  renderDraftsList();
+  showToast('All drafts cleared');
 }
 
 // ── DATE / GREETING ──
