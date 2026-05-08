@@ -175,6 +175,19 @@
   .autosave-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-right: 5px; animation: pulse 1.5s ease-in-out; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
+  /* custom confirm modal */
+  .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:30px; }
+  .confirm-overlay.active { display:flex; }
+  .confirm-box { background:#1a2535; border-radius:18px; width:100%; max-width:320px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
+  .confirm-msg { color:#fff; font-size:18px; font-weight:600; padding:24px 22px 8px; text-align:center; line-height:1.4; }
+  .confirm-sub { color:rgba(255,255,255,0.45); font-size:14px; padding:0 22px 20px; text-align:center; }
+  .confirm-btns { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid rgba(255,255,255,0.08); }
+  .confirm-btn { padding:18px; font-size:17px; font-weight:700; border:none; background:none; cursor:pointer; }
+  .confirm-btn.cancel { color:rgba(255,255,255,0.5); border-right:1px solid rgba(255,255,255,0.08); }
+  .confirm-btn.ok { color:#e05555; }
+  .confirm-btn.ok.gold { color:var(--gold); }
+  .confirm-btn:active { opacity:0.7; }
+
   /* settings screen */
   #settings { background: var(--gray); }
   .settings-topbar { background: var(--navy); padding: 16px 18px 14px; display: flex; align-items: center; gap: 14px; }
@@ -525,11 +538,13 @@ function resumeDraft(storageKey, formKey) {
 
 function deleteDraft(e, storageKey) {
   e.stopPropagation();
-  if (confirm('Delete this draft?')) {
-    localStorage.removeItem(storageKey);
-    renderDraftsList();
-    showToast('Draft deleted');
-  }
+  showConfirm('Delete this draft?', 'This cannot be undone.', 'Delete').then(ok => {
+    if (ok) {
+      localStorage.removeItem(storageKey);
+      renderDraftsList();
+      showToast('Draft deleted');
+    }
+  });
 }
 
 // ── DATE / GREETING ──
@@ -1152,9 +1167,9 @@ function selectRadio(groupId, value) {
 }
 
 function clearForm() {
-  if(confirm('Clear all entries on this form?')) {
-    openForm(currentFormKey);
-  }
+  showConfirm('Clear this form?', 'All entries will be lost.', 'Clear').then(ok => {
+    if (ok) openForm(currentFormKey);
+  });
 }
 
 // ── PHOTO ATTACHMENTS ──
@@ -1524,6 +1539,23 @@ function exportPDF() {
   } // end renderPDF
 }
 
+// ── CUSTOM CONFIRM (replaces native confirm() which breaks in standalone mode) ──
+let confirmResolve = null;
+function showConfirm(msg, sub, okLabel='Confirm', danger=true) {
+  return new Promise(resolve => {
+    document.getElementById('confirmMsg').textContent = msg;
+    document.getElementById('confirmSub').textContent = sub || '';
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = okLabel;
+    okBtn.className = 'confirm-btn ok' + (danger ? '' : ' gold');
+    document.getElementById('confirmOverlay').classList.add('active');
+    confirmResolve = (result) => {
+      document.getElementById('confirmOverlay').classList.remove('active');
+      resolve(result);
+    };
+  });
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1531,5 +1563,17 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3200);
 }
 </script>
+<!-- ══════════════════ CONFIRM MODAL ══════════════════ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-sub" id="confirmSub"></div>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" onclick="confirmResolve(false)">Cancel</button>
+      <button class="confirm-btn ok" id="confirmOkBtn" onclick="confirmResolve(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
