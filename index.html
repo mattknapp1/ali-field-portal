@@ -1113,14 +1113,13 @@ function openForm(key) {
   document.getElementById('formBody').scrollTop = 0;
   const today = new Date().toISOString().split('T')[0];
   document.querySelectorAll('input[type=date]').forEach(el => { if(!el.value) el.value = today; });
-  // Auto-fill only the rep signature name — supervisor fields are for the builder's super
+  // Auto-fill ALI rep name fields — supervisor fields for the builder's super are left blank
   const s = loadSettings();
   if (s.superName) {
-    const repName = document.getElementById('sig-rep-name');
-    if (repName && !repName.value) repName.value = s.superName;
-    // Also fill veh-employee since that IS the ALI field rep
-    const vehEmp = document.getElementById('veh-employee');
-    if (vehEmp && !vehEmp.value) vehEmp.value = s.superName;
+    ['sig-rep-name','so-rep-name','ir-inspector','qa-super','ewa-super','fm-super','veh-employee'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value) el.value = s.superName;
+    });
   }
   // Init signature pads after DOM is ready
   setTimeout(() => {
