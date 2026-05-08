@@ -484,51 +484,59 @@ function renderDraftsList() {
   const el = document.getElementById('drafts-list');
   const countEl = document.getElementById('draft-count');
   if (!el) return;
-  // Store globally so buttons can reference by index
-  window._draftsList = drafts;
   if (drafts.length === 0) {
     el.innerHTML = '<div class="no-drafts">No saved drafts yet</div>';
     if (countEl) countEl.textContent = '';
     return;
   }
   if (countEl) countEl.textContent = drafts.length + ' draft' + (drafts.length > 1 ? 's' : '');
-  el.innerHTML = drafts.map((d, i) => {
+  el.innerHTML = '';
+  drafts.forEach((d, i) => {
     const icon = FORM_ICONS[d.formKey] || '📄';
     const formTitle = (forms[d.formKey] || {}).title || d.formKey;
     let dateStr = 'Saved';
-    try {
-      const dt = new Date(d.savedAt);
-      dateStr = dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    } catch(e) {}
+    try { dateStr = new Date(d.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch(e) {}
     const preview = d.preview || 'In progress';
-    return `<div class="draft-card">
-      <div class="draft-icon">${icon}</div>
-      <div class="draft-info">
-        <div class="draft-title">${formTitle}</div>
-        <div class="draft-meta">${dateStr} &middot; ${preview}</div>
-      </div>
-      <div class="draft-actions">
-        <button class="draft-resume" ontouchend="draftResume(${i})" onclick="draftResume(${i})">Resume</button>
-        <button class="draft-delete" ontouchend="draftDelete(event,${i})" onclick="draftDelete(event,${i})">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
 
-function draftResume(i) {
-  const d = (window._draftsList||[])[i];
-  if (!d) return;
-  resumeDraft(d.storageKey, d.formKey);
-}
+    const card = document.createElement('div');
+    card.className = 'draft-card';
 
-function draftDelete(e, i) {
-  if(e) e.stopPropagation();
-  const d = (window._draftsList||[])[i];
-  if (!d) return;
-  const key = d.storageKey;
-  localStorage.removeItem(key);
-  renderDraftsList();
-  showToast('Draft deleted');
+    const iconEl = document.createElement('div');
+    iconEl.className = 'draft-icon';
+    iconEl.textContent = icon;
+
+    const info = document.createElement('div');
+    info.className = 'draft-info';
+    info.innerHTML = `<div class="draft-title">${formTitle}</div><div class="draft-meta">${dateStr} &middot; ${preview}</div>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'draft-actions';
+
+    const resumeBtn = document.createElement('button');
+    resumeBtn.className = 'draft-resume';
+    resumeBtn.textContent = 'Resume';
+    resumeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      resumeDraft(d.storageKey, d.formKey);
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'draft-delete';
+    deleteBtn.textContent = '✕';
+    deleteBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      localStorage.removeItem(d.storageKey);
+      renderDraftsList();
+      showToast('Draft deleted');
+    });
+
+    actions.appendChild(resumeBtn);
+    actions.appendChild(deleteBtn);
+    card.appendChild(iconEl);
+    card.appendChild(info);
+    card.appendChild(actions);
+    el.appendChild(card);
+  });
 }
 
 function saveDraft() {
